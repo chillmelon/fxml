@@ -1,0 +1,17 @@
+name: mqpyml
+channels:
+  - conda-forge
+  - nvidia
+  - defaults
+dependencies:
+  - python=3.11
+  - pytorch
+  - lightning
+  - numpy
+  - pandas
+  - matplotlib
+  - tqdm
+  - yaml
+  - tensorboard
+  - joblib
+  - scikit-learn
