@@ -7,8 +7,16 @@ import numpy as np
 import pandas as pd
 from models.gru_module import ForexGRU
 import torch
+import joblib
 
-CHECKPOINT_PATH = './lightning_logs/forex_gru/version_9/checkpoints/epoch=36-step=165908.ckpt'
+CHECKPOINT_PATH = r'lightning_logs\forex_gru\version_1\checkpoints\epoch=41-step=188328.ckpt'
+SCALER_PATH = './scaler.pkl'
+
+# Load *model* and *scaler* from file
+scaler = joblib.load(SCALER_PATH)
+model = ForexGRU.load_from_checkpoint(CHECKPOINT_PATH)
+model.to('cpu')
+model.eval()
 
 resolution = 30
 # tick_queue = queue.Queue()
@@ -94,9 +102,7 @@ def floor_time(dt, seconds=60):
 
 
 def gru_strategy():
-    model = ForexGRU.load_from_checkpoint(CHECKPOINT_PATH)
-    model.to('cpu')
-    model.eval()
+
     while True:
         with torch.no_grad():
             x = tensor_queue.get()
@@ -119,7 +125,11 @@ def msg_to_tensor(msg: str):
     delta = np.diff(closes)
     pct_delta = delta / closes[:-1]
 
-    seq = pct_delta.reshape(1, -1, 1)
+    pct_delta = pct_delta.reshape(-1, 1)  # (seq_len, 1)
+
+    pct_delta_scaled = scaler.transform(pct_delta)
+
+    seq = pct_delta_scaled.reshape(1, -1, 1)  # (batch_size=1, seq_len, feature_dim=1)
     tensor = torch.FloatTensor(seq)
     return tensor
 

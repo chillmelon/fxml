@@ -10,18 +10,18 @@ class ForexGRU(L.LightningModule):
 
         self.gru = nn.GRU(
             input_size=1,
-            hidden_size=64,
+            hidden_size=128,
             num_layers=1,
             batch_first=True
         )
-        self.fc = nn.Linear(64, self.hparams.horizon)
-        self.loss_fn = nn.MSELoss()  # Use BCEWithLogitsLoss() for binary classification
+        self.fc = nn.Linear(128, self.hparams.horizon)
+        self.loss_fn = nn.HuberLoss()  # Use BCEWithLogitsLoss() for binary classification
 
     def forward(self, x):
         out, _ = self.gru(x)
         last_out = out[:, -1, :]  # get output at last time step
-        return torch.tanh(self.fc(last_out))
-        # return self.fc(last_out)
+        # return torch.tanh(self.fc(last_out))
+        return self.fc(last_out)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -38,3 +38,12 @@ class ForexGRU(L.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-4)
+
+    def get_progress_bar_dict(self):
+        """Customize metrics shown in the progress bar."""
+        items = super().get_progress_bar_dict()
+        # Format float values to 6 digits
+        for k, v in items.items():
+            if isinstance(v, float):
+                items[k] = f"{v:.6f}"
+        return items
