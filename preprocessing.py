@@ -12,7 +12,7 @@ def main():
 
 
     data = add_delta(df_2024)
-    data = add_direction(data, delta_columns=['close'], threshold=0.004)
+    data = add_direction(data, delta_columns=['close'], threshold=5e-05)
     # data = add_technical_indicators(data)
     data.to_csv(PROCESSED_PATH)
     # data.to_pickle(PROCESSED_PATH)

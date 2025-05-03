@@ -1,53 +1,48 @@
-import numpy as np
-import pandas as pd
 import torch
 from torch.utils.data import Dataset
+import numpy as np
 
 class ForexRegressionDataset(Dataset):
-    """Dataset for forex price data with sequence-based inputs."""
+    """Dataset for sequence forecasting with multi-step horizon."""
 
-    def __init__(self, data, sequence_length, target_horizon, features, target, transform=None):
-        """
-        Initialize the dataset.
-
-        Args:
-            data (pandas.DataFrame): The forex data.
-            sequence_length (int): The length of the input sequence.
-            target_horizon (int): The horizon for the target prediction.
-            features (list): The feature columns to use.
-            target (str): The target column to predict.
-            transform (callable, optional): Optional transform to be applied to samples.
-        """
-        self.data = data
+    def __init__(self, data, sequence_length, horizon, features, target, group_col='time_group'):
         self.sequence_length = sequence_length
-        self.target_horizon = target_horizon
+        self.horizon = horizon
         self.features = features
         self.target = target
+        self.group_col = group_col
 
-        # Prepare data
-        self._prepare_data()
+        # Reset index to ensure integer indexing is valid
+        self.data = data.reset_index(drop=True)
+        self.feature_data = self.data[self.features].values
+        self.target_data = self.data[self.target].values
+        self.group_labels = self.data[self.group_col].values
 
-    def _prepare_data(self):
-        """Prepare the data for training."""
-        # Extract features and target
-        features_data = self.data[self.features].values
-        target_data = self.data[self.target].values
+        self.IDs = self._get_valid_sequence_starts()
 
-        # Create sequences
-        X, y = [], []
-        for i in range(len(features_data) - self.sequence_length - self.target_horizon + 1):
-            X.append(features_data[i:i+self.sequence_length])
-            # For multi-step forecasting, get a sequence of future values
-            y.append(target_data[i+self.sequence_length:i+self.sequence_length+self.target_horizon])
+    def _get_valid_sequence_starts(self):
+        indices = []
+        group_indices = {}
 
-        # Convert to tensors
-        self.X = torch.FloatTensor(np.array(X))
-        self.y = torch.FloatTensor(np.array(y))
+        for idx, group in enumerate(self.group_labels):
+            group_indices.setdefault(group, []).append(idx)
+
+        for group, idxs in group_indices.items():
+            if len(idxs) >= self.sequence_length + self.horizon:
+                valid = idxs[:len(idxs) - (self.sequence_length + self.horizon) + 1]
+                indices.extend(valid)
+
+        return indices
 
     def __len__(self):
-        """Return the number of samples."""
-        return len(self.X)
+        return len(self.IDs)
 
     def __getitem__(self, idx):
-        """Return a sample."""
-        return self.X[idx], self.y[idx]
+        start = idx
+        end = idx + self.sequence_length
+        target_idx = start + self.sequence_length + self.horizon - 1
+
+        x = torch.FloatTensor(np.array(self.feature_data[start:end]))
+        y = torch.FloatTensor(np.array(self.feature_data[target_idx]))
+
+        return x, y

@@ -7,6 +7,7 @@ import joblib
 from sklearn.preprocessing import StandardScaler
 
 from dataset.forex_clas_dataset import ForexClassificationDataset
+from dataset.splitter import Splitter
 
 
 class ForexClassificationDataModule(L.LightningDataModule):
@@ -15,10 +16,12 @@ class ForexClassificationDataModule(L.LightningDataModule):
         data_path: str,
         sequence_length: int = 30,
         target: str = "label",
-        features: list = ["close_pct_delta"],
+        features: list = ["close_return"],
         target_horizon: int = 1,
         batch_size: int = 64,
-        val_split: float = 0.2
+        split_method = None,
+        val_split: float = 0.2,
+        num_workers: int = 0,
     ):
         super().__init__()
         self.data_path = data_path
@@ -28,43 +31,50 @@ class ForexClassificationDataModule(L.LightningDataModule):
         self.target_horizon = target_horizon
         self.batch_size = batch_size
         self.val_split = val_split
+        self.split_method = split_method
+        self.num_workers = num_workers
+        self.persistent_workers = (True if num_workers > 0 else False)
         self.save_hyperparameters()
 
     def prepare_data(self):
-        self.df = pd.read_csv(self.data_path)[1:]
+        self.df = pd.read_pickle(self.data_path)
 
     def setup(self, stage=None):
-        if stage == "fit" or stage is None:
-            # ✨ Normalize only based on train data
-            total_size = len(self.df) - self.sequence_length - self.target_horizon + 1
-            train_size = int(total_size * (1 - self.val_split))
+        # Now create dataset
+        dataset = ForexClassificationDataset(
+            data=self.df,
+            sequence_length=self.sequence_length,
+            horizon=self.target_horizon,
+            features=self.features,
+            target=self.target,
+            group_col='time_group'
+        )
 
-            train_df = self.df.iloc[:train_size + self.sequence_length]
+        IDs = dataset.IDs
 
-            self.scaler = StandardScaler()
-            self.scaler.fit(train_df[self.features])
+        splitter = Splitter(
+            df=dataset.data,
+            IDs=IDs,
+            sequence_length=self.sequence_length,
+            horizon=self.target_horizon,
+            target_col=self.target,
+            method=self.split_method,
+            test_size=self.val_split,
+            random_state=42
+        )
+        train_indices, val_indices = splitter.split()
 
-            # Apply normalization to the entire feature column
-            self.df[self.features] = self.scaler.transform(self.df[self.features])
-
-            # Now create dataset
-            dataset = ForexClassificationDataset(
-                data=self.df,
-                sequence_length=self.sequence_length,
-                target=self.target,
-                features=self.features
-            )
-
-            self.train_dataset = Subset(dataset, list(range(train_size)))
-            self.val_dataset = Subset(dataset, list(range(train_size, len(dataset))))
+        self.train_dataset = Subset(dataset, train_indices)
+        self.val_dataset = Subset(dataset, val_indices)
 
 
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
-            # num_workers=cpu_count(),
-            # persistent_workers=True,
+            num_workers=self.num_workers,
+            persistent_workers=self.persistent_workers,
+            pin_memory=True,
             shuffle=True
         )
 
@@ -72,8 +82,9 @@ class ForexClassificationDataModule(L.LightningDataModule):
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
-            # num_workers=cpu_count(),
-            # persistent_workers=True,
+            num_workers=self.num_workers,
+            persistent_workers=self.persistent_workers,
+            pin_memory=True,
             shuffle=False
         )
 
@@ -81,7 +92,8 @@ class ForexClassificationDataModule(L.LightningDataModule):
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
-            # num_workers=cpu_count(),
-            # persistent_workers=True,
+            num_workers=self.num_workers,
+            persistent_workers=self.persistent_workers,
+            pin_memory=True,
             shuffle=False
         )

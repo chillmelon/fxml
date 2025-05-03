@@ -3,16 +3,35 @@ import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from tqdm import tqdm
 
-def add_delta(df, delta_columns=['close']):
+def add_delta(df, price_col: str = 'close') -> pd.DataFrame:
     """
-    Add absolute and percentage delta columns.
+    Adds delta features to a price dataframe.
+
+    - Adds 'close_delta': price difference between t and t-1
+    - Adds 'close_return': percentage return between t and t-1
+
+    Args:
+        df (pd.DataFrame): Input dataframe with a 'close' column
+        price_col (str): Column to compute deltas on (default 'close')
+
+    Returns:
+        pd.DataFrame: Copy of dataframe with new delta features added
     """
     df = df.copy()
-    print(f"[INFO] Adding delta columns for: {delta_columns}")
-    for col in delta_columns:
-        df[f"{col}_delta"] = df[col].diff()
-        df[f"{col}_pct_delta"] = df[col].pct_change() * 100
-    return df.bfill()
+
+    # Shifted previous prices
+    prev = df[price_col].shift(1)
+
+    # Absolute change: ΔP = P[t] - P[t-1]
+    df[f"{price_col}_delta"] = df[price_col] - prev
+
+    # % return: (P[t] - P[t-1]) / P[t-1]
+    # Equivalent to: (P[t] / P[t-1]) - 1
+    df[f"{price_col}_return"] = df[price_col] / prev - 1
+
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+    return df.bfill().reset_index(drop=True)
 
 
 def add_direction(df, delta_columns=['close'], threshold=0.005):
@@ -22,7 +41,7 @@ def add_direction(df, delta_columns=['close'], threshold=0.005):
     df = df.copy()
     print(f"[INFO] Adding direction columns for: {delta_columns} with threshold {threshold}")
     for col in delta_columns:
-        df[f"{col}_direction"] =  df[col].diff(periods=-1).apply(lambda x: 'up' if x > threshold else ('down' if x < -threshold else 'flat'))
+        df[f"{col}_direction"] =  df[f"{col}_return"].apply(lambda x: 'up' if x > threshold else ('down' if x < -threshold else 'flat'))
         label_encoder = LabelEncoder()
         df["label"] =  label_encoder.fit_transform(df[f"{col}_direction"])
         direction_counts = df["label"].value_counts()
