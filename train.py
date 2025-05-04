@@ -28,7 +28,7 @@ def main():
     # Initialize Data Module
     dm = ForexRegressionDataModule(
         data_path=PKL_PATH,
-        sequence_length=5,
+        sequence_length=30,
         target='close_return',
         features=FEATURES_COLS,
         target_horizon=HORIZON,
@@ -44,7 +44,7 @@ def main():
         # horizon=1,
         n_hidden=64,
         n_layers=2,
-        dropout=0.8,
+        dropout=0.3,
         lr=1e-4
     )
     # Start Logger

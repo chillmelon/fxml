@@ -16,7 +16,7 @@ class ForexRegressionDataModule(L.LightningDataModule):
         self,
         data_path: str,
         sequence_length: int = 30,
-        target: str = "label",
+        target: str = "close_return",
         features: list = ["close_return"],
         target_horizon: int = 1,
         batch_size: int = 64,

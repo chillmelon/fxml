@@ -43,6 +43,6 @@ class ForexRegressionDataset(Dataset):
         target_idx = start + self.sequence_length + self.horizon - 1
 
         x = torch.FloatTensor(np.array(self.feature_data[start:end]))
-        y = torch.FloatTensor(np.array(self.feature_data[target_idx]))
+        y = torch.FloatTensor(np.array(self.target_data[target_idx]))
 
         return x, y
