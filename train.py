@@ -12,9 +12,11 @@ import pandas as pd
 from datamodules.fx_clas_dm import ForexClassificationDataModule
 from datamodules.fx_regr_dm import ForexRegressionDataModule
 from dataset.forex_regr_dataset import ForexRegressionDataset
+from models.gru_prob_regr import ProbabilisticGRURegressor
 from models.gru_regr import GRURegressorModule
 from models.lstm_classifier import LSTMClassifierModule
 from models.gru_classifier import GRUClassifierModule
+from models.lstm_regr import LSTMRegressorModule
 from models.transformer_classifier import TransformerClassifierModule
 
 # DATA_PATH = r'data\processed\usdjpy-20200101-20241231.csv'
@@ -37,21 +39,21 @@ def main():
     )
 
     # Initialize GRU module
-    model = GRURegressorModule(
+    model = ProbabilisticGRURegressor(
         n_features=len(FEATURES_COLS),
-        horizon=1,
+        # horizon=1,
         n_hidden=64,
         n_layers=2,
         dropout=0.8,
         lr=1e-4
     )
     # Start Logger
-    logger = TensorBoardLogger("lightning_logs", name="forex_lstm_regr")
+    logger = TensorBoardLogger("lightning_logs", name="prob_gru")
 
     profiler = SimpleProfiler(filename='profiler')
 
     early_stopping = EarlyStopping(
-        monitor='val_loss',
+        monitor='val_nll',
         mode='min',
         patience=10,
         verbose=True
@@ -62,7 +64,7 @@ def main():
         save_top_k=1,
         save_last=True,
         verbose=True,
-        monitor='val_loss',
+        monitor='val_nll',
         mode='min'
     )
 
@@ -76,6 +78,7 @@ def main():
         callbacks=[checkpoint_callback, early_stopping],
         max_epochs=200,
         logger=logger,
+        gradient_clip_val=1.0
         # num_sanity_val_steps=0,
     )
     trainer.fit(model, datamodule=dm)
