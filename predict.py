@@ -1,17 +1,20 @@
 import torch
-from models.gru_module import ForexGRU
+
+from models.gru_prob_regr import ProbabilisticGRURegressor
 
 
-CHECKPOINT_PATH = r'lightning_logs\forex_gru\version_1\checkpoints\epoch=41-step=188328.ckpt'
+CHECKPOINT_PATH = r'lightning_logs\prob_gru\version_10\checkpoints\best_checkpoint.ckpt'
 
 def main():
-    model = ForexGRU.load_from_checkpoint(CHECKPOINT_PATH)
+    model = ProbabilisticGRURegressor.load_from_checkpoint(CHECKPOINT_PATH)
     model.to('cpu')
     model.eval()
-    x = torch.randn(1, 30).unsqueeze(-1)
+
     with torch.no_grad():
-        prediction = model(x)
-        print(prediction)
+        for i in range(10):
+            x = torch.randn(1, 30).unsqueeze(-1)
+            prediction = model(x)
+            print(prediction)
 
 if __name__ == '__main__':
     main()

@@ -19,6 +19,7 @@ class ForexRegressionDataModule(L.LightningDataModule):
         target: str = "close_return",
         features: list = ["close_return"],
         target_horizon: int = 1,
+        stride: int = 1,
         batch_size: int = 64,
         split_method = None,
         val_split: float = 0.2,
@@ -30,6 +31,7 @@ class ForexRegressionDataModule(L.LightningDataModule):
         self.target = target
         self.features = features
         self.target_horizon = target_horizon
+        self.stride = stride
         self.batch_size = batch_size
         self.val_split = val_split
         self.split_method = split_method
@@ -48,6 +50,7 @@ class ForexRegressionDataModule(L.LightningDataModule):
             horizon=self.target_horizon,
             features=self.features,
             target=self.target,
+            stride=self.stride,
             group_col='time_group'
         )
 

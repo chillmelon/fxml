@@ -16,22 +16,26 @@ from models.gru_prob_regr import ProbabilisticGRURegressor
 from models.gru_regr import GRURegressorModule
 from models.lstm_classifier import LSTMClassifierModule
 from models.gru_classifier import GRUClassifierModule
+from models.lstm_prob_regr import ProbabilisticLSTMRegressor
 from models.lstm_regr import LSTMRegressorModule
 from models.transformer_classifier import TransformerClassifierModule
 
 # DATA_PATH = r'data\processed\usdjpy-20200101-20241231.csv'
 DATA_PATH = './data/processed/usd-jpy-2024.csv'
 PKL_PATH = './data/processed/usdjpy-bar-2024-01-01-2024-12-31_processed.pkl'
-HORIZON=1
-FEATURES_COLS = ['close_return']
+SEQUENCE_LENGTH=30
+HORIZON=3
+STRIDE=SEQUENCE_LENGTH//2
+FEATURES_COLS = ['close_return', 'volume']
 def main():
     # Initialize Data Module
     dm = ForexRegressionDataModule(
         data_path=PKL_PATH,
-        sequence_length=30,
+        sequence_length=SEQUENCE_LENGTH,
         target='close_return',
         features=FEATURES_COLS,
         target_horizon=HORIZON,
+        stride=STRIDE,
         batch_size=64,
         # split_method='stratified',
         val_split=0.2,
@@ -48,14 +52,14 @@ def main():
         lr=1e-4
     )
     # Start Logger
-    logger = TensorBoardLogger("lightning_logs", name="prob_gru")
+    logger = TensorBoardLogger("lightning_logs", name="prob_gru_multi")
 
     profiler = SimpleProfiler(filename='profiler')
 
     early_stopping = EarlyStopping(
         monitor='val_nll',
         mode='min',
-        patience=10,
+        patience=3,
         verbose=True
     )
 
