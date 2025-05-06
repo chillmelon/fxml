@@ -4,7 +4,7 @@ import lightning as pl
 from torchmetrics.classification import MulticlassAccuracy
 
 class GRUModel(nn.Module):
-    def __init__(self, n_features, n_classes, n_hidden, n_layers, dropout):
+    def __init__(self, n_features, output_size, n_hidden, n_layers, dropout):
         super().__init__()
 
         self.gru = nn.GRU(
@@ -14,30 +14,30 @@ class GRUModel(nn.Module):
             batch_first=True,
             dropout=dropout
         )
-        self.classifier = nn.Linear(n_hidden, n_classes)
+        self.linear = nn.Linear(n_hidden, output_size)
+        self.softmax = nn.Softmax(1)
 
     def forward(self, x):
         self.gru.flatten_parameters()
         _, hidden = self.gru(x)
-        out = hidden[-1]
-        return self.classifier(out)
+        logits = self.linear(hidden[-1])
+        return self.softmax(logits)
 
 
-class GRUClassifierModule(pl.LightningModule):
-    def __init__(self, n_features=1, n_classes=3, n_hidden=64, n_layers=2, dropout=0.0):
+class GRUModule(pl.LightningModule):
+    def __init__(self, n_features=1, output_size=1, n_hidden=64, n_layers=2, dropout=0.0):
         super().__init__()
         self.save_hyperparameters()
 
         self.model = GRUModel(
             n_features=self.hparams.n_features,
-            n_classes=self.hparams.n_classes,
+            output_size=self.hparams.output_size,
             n_hidden=self.hparams.n_hidden,
             n_layers=self.hparams.n_layers,
             dropout=self.hparams.dropout,
         )
 
-        self.criterion = nn.CrossEntropyLoss()
-        self.accuracy = MulticlassAccuracy(self.hparams.n_classes)
+        self.criterion = nn.MSELoss()
 
     def forward(self, x, labels=None):
         output = self.model(x)
@@ -47,42 +47,30 @@ class GRUClassifierModule(pl.LightningModule):
         return loss, output
 
     def training_step(self, batch, batch_idx):
-        x, y = batch
+        x, y, _ = batch
         loss, out = self(x, y)
-        pred = torch.argmax(out, dim=1)
-        step_acc = self.accuracy(pred, y)
 
         self.log('train_loss', loss, prog_bar=True, logger=True)
-        self.log('train_acc', step_acc, prog_bar=True, logger=True)
         return {
-            'loss': loss,
-            'step_acc': step_acc
+            'loss': loss
         }
 
     def validation_step(self, batch, batch_idx):
-        x, y = batch
+        x, y, _ = batch
         loss, out = self(x, y)
-        pred = torch.argmax(out, dim=1)
-        step_acc = self.accuracy(pred, y)
 
         self.log('val_loss', loss, prog_bar=True, logger=True)
-        self.log('val_acc', step_acc, prog_bar=True, logger=True)
         return {
-            'loss': loss,
-            'step_acc': step_acc
+            'loss': loss
         }
 
     def test_step(self, batch, batch_idx):
-        x, y = batch
+        x, y, _ = batch
         loss, out = self(x, y)
-        pred = torch.argmax(out, dim=1)
-        step_acc = self.accuracy(pred, y)
 
         self.log('test_loss', loss, prog_bar=True, logger=True)
-        self.log('test_acc', step_acc, prog_bar=True, logger=True)
         return {
-            'loss': loss,
-            'step_acc': step_acc
+            'loss': loss
         }
 
     def configure_optimizers(self):

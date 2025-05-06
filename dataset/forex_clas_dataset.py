@@ -4,11 +4,12 @@ from torch.utils.data import Dataset
 class ForexClassificationDataset(Dataset):
     """Dataset for sequence classification with multi-step horizon."""
 
-    def __init__(self, data, sequence_length, horizon, features, target, group_col='time_group'):
+    def __init__(self, data, sequence_length, horizon, stride, features, target, group_col='time_group'):
         self.sequence_length = sequence_length
         self.horizon = horizon
         self.features = features
         self.target = target
+        self.stride = stride
         self.group_col = group_col
 
         # Reset index to ensure integer indexing is valid
@@ -27,9 +28,10 @@ class ForexClassificationDataset(Dataset):
             group_indices.setdefault(group, []).append(idx)
 
         for group, idxs in group_indices.items():
-            if len(idxs) >= self.sequence_length + self.horizon:
-                valid = idxs[:len(idxs) - (self.sequence_length + self.horizon) + 1]
-                indices.extend(valid)
+            idxs = sorted(idxs)
+            max_start = len(idxs) - (self.sequence_length + self.horizon) + 1
+            for start in range(0, max_start, self.stride):
+                indices.append(idxs[start])
 
         return indices
 

@@ -1,29 +1,31 @@
 import torch
 import joblib
 import matplotlib.pyplot as plt
+import pandas as pd
 from lightning.pytorch import Trainer
-from models.gru_prob_regr import ProbabilisticGRURegressor
-from datamodules.fx_regr_dm import ForexRegressionDataModule
+from datamodules.data_module import ForexDataModule
+from dataset.dataset import ForexDataset
+from models.gru_model import GRUModule
+from utils import get_sequence_start_indices
 
 # === CONFIG ===
-CHECKPOINT_PATH = r'lightning_logs\prob_gru_multi\version_4\checkpoints\best_checkpoint.ckpt'
-DATA_PATH = "./data/processed/usdjpy-bar-2024-01-01-2024-12-31_processed.pkl"
-FEATURES_COLS = ['close_return', 'volume']
+CHECKPOINT_PATH = r'lightning_logs\prob_gru\version_5\checkpoints\best_checkpoint.ckpt'
+SCALER_PATH='standard_scaler.pkl'
+DATA_PATH = "./data/processed/usdjpy-bar-2020-01-01-2024-12-31_processed.pkl"
+FEATURES_COLS = ['close_return']
 SEQUENCE_LENGTH = 30
-TARGET_COL = 'close_return'
-TARGET_HORIZON = 3
+TARGET_COLS = ['prob_down', 'prob_flat', 'prob_up']
+HORIZON = 1
+STRIDE = 5
 
-def plot_prediction_with_uncertainty(mu, sigma, y_true=None, title="Prediction with Confidence"):
-    mu = mu.squeeze().cpu()
-    sigma = sigma.squeeze().cpu()
-    upper = mu + 1.96 * sigma
-    lower = mu - 1.96 * sigma
+def plot_prediction(y_pred, y_true=None, title="Prediction"):
+    # mu = mu.squeeze().cpu()
+
 
     plt.figure(figsize=(12, 6))
-    plt.plot(mu, label="Predicted μ (mean)", color="blue")
-    plt.fill_between(range(len(mu)), lower, upper, alpha=0.3, label="95% Confidence Interval")
+    plt.plot(y_pred, label="Predicted", color="blue")
     if y_true is not None:
-        plt.plot(y_true.squeeze().cpu(), label="Ground Truth", color="black", linestyle="--")
+        plt.plot(y_true.cpu(), label="Ground Truth", color="black", linestyle="--")
     plt.title(title)
     plt.xlabel("Sample")
     plt.ylabel("Return")
@@ -33,36 +35,44 @@ def plot_prediction_with_uncertainty(mu, sigma, y_true=None, title="Prediction w
     plt.show()
 
 def main():
-    # Load model from checkpoint
-    model = ProbabilisticGRURegressor.load_from_checkpoint(CHECKPOINT_PATH)
-    model.eval()
-    model.freeze()
+    df = pd.read_pickle(DATA_PATH)
 
-    # Setup datamodule
-    dm = ForexRegressionDataModule(
-        data_path=DATA_PATH,
+    IDs = get_sequence_start_indices(
+        df,
         sequence_length=SEQUENCE_LENGTH,
-        target=TARGET_COL,
+        horizon=HORIZON,
+        stride=STRIDE,
+        group_col='time_group',
+    )
+    # Initialize Data Module
+    dm = ForexDataModule(
+        data=df,
+        IDs=IDs,
+        sequence_length=SEQUENCE_LENGTH,
+        target=TARGET_COLS,
         features=FEATURES_COLS,
-        target_horizon=TARGET_HORIZON,
+        horizon=HORIZON,
         batch_size=64,
         val_split=0.2,
-        num_workers=0
+        num_workers=0,
     )
-    dm.prepare_data()
+
     dm.setup(stage="test")
+
+    model = GRUModule.load_from_checkpoint(CHECKPOINT_PATH)
 
     # Run test
     trainer = Trainer(logger=False, enable_checkpointing=False)
     trainer.test(model, datamodule=dm)
 
     # Predict on one batch
-    val_loader = dm.val_dataloader()
-    x, y = next(iter(val_loader))
+    val_loader = dm.test_dataloader()
+    x, y, _ = next(iter(val_loader))
     with torch.no_grad():
-        mu, log_sigma = model(x)
-        sigma = torch.exp(log_sigma)
-        plot_prediction_with_uncertainty(mu, sigma, y_true=y)
+        _, probs = model(x)
+        pred_classes = torch.argmax(probs, dim=1)
+
+        plot_prediction(pred_classes, y_true=torch.argmax(y, dim=1))
 
 if __name__ == "__main__":
     main()

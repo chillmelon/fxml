@@ -37,12 +37,22 @@ class ForexRegressionDataModule(L.LightningDataModule):
         self.split_method = split_method
         self.num_workers = num_workers
         self.persistent_workers = (True if num_workers > 0 else False)
+        self.scaler = StandardScaler()
         self.save_hyperparameters()
 
     def prepare_data(self):
         self.df = pd.read_pickle(self.data_path)
 
     def setup(self, stage=None):
+        if stage == "fit":
+            self.scaler.fit(self.df[self.features])
+            joblib.dump(self.scaler, 'standard_scaler.pkl')
+        else:
+            self.scaler = joblib.load('standard_scaler.pkl')
+
+        # Always transform the features after fitting/loading
+        self.df[self.features] = self.scaler.transform(self.df[self.features])
+
         # Now create dataset
         dataset = ForexRegressionDataset(
             data=self.df,
@@ -53,6 +63,7 @@ class ForexRegressionDataModule(L.LightningDataModule):
             stride=self.stride,
             group_col='time_group'
         )
+
 
         IDs = dataset.IDs
 
