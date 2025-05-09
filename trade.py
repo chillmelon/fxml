@@ -1,167 +1,141 @@
-from datetime import datetime, timezone, timedelta
-import socket
-import threading
-import time
-import queue
+from __future__ import annotations
+
+import logging
+import MetaTrader5 as Mt5
+
+from libs.mqpy.rate import Rates
+from libs.mqpy.tick import Tick
+from libs.mqpy.trade import Trade
+
 import numpy as np
 import pandas as pd
-from models.gru_module import ForexGRU
+from models.gru_model import GRUModule
 import torch
-import joblib
 
-CHECKPOINT_PATH = r'lightning_logs\forex_gru\version_1\checkpoints\epoch=41-step=188328.ckpt'
-SCALER_PATH = './scaler.pkl'
 
-# Load *model* and *scaler* from file
-scaler = joblib.load(SCALER_PATH)
-model = ForexGRU.load_from_checkpoint(CHECKPOINT_PATH)
+# Setting Parameters
+CHECKPOINT_PATH = r'lightning_logs\prob_gru\version_6\checkpoints\best_checkpoint.ckpt'
+WINDOW_SIZE = 30
+
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+# Loading model at global scope
+model = GRUModule.load_from_checkpoint(CHECKPOINT_PATH)
 model.to('cpu')
 model.eval()
 
-resolution = 30
-# tick_queue = queue.Queue()
-rate_queue = queue.Queue()
-bar_queue = queue.Queue()
-tensor_queue = queue.Queue()
+def gru_strategy(close_prices, conf_threshold=0.5):
+    """
+    Predicts using a GRU model
+    """
+    class_map = {0: 'sell', 1: 'hold', 2: 'buy'}
+    close_returns = np.diff(close_prices) / close_prices[:-1]
+    with torch.no_grad():
+        _, probs = model(torch.FloatTensor(close_returns.reshape(1, -1, 1)))
 
-# def read_tick(conn, addr):
-#     try:
-#         while True:
-#             msg = conn.recv(8192).decode()
-#             if msg != "":
-#                 print("[INFO]\tMessage:", msg)
-#                 tick_queue.put(msg)
-#     except ConnectionError:
-#         print("[INFO]\tread lost connection to ", addr)
+        pred_class = int(torch.argmax(probs, dim=1).item())
+        confidence = probs[0, pred_class].item()
 
-def read_rate(conn, addr):
+        if confidence >= conf_threshold:
+            signal = class_map[pred_class]
+        else:
+            signal = 'hold'  # fallback to 'hold' if not confident
+
+        return signal
+
+
+    # calculate returns
+
+
+def main() -> None:
+    # Initialize the trading strategy
+    trade = Trade(
+        expert_name="Crazy Buy",
+        version="1.0",
+        symbol="USDJPY",
+        magic_number=567,
+        lot=0.1,
+        stop_loss=25,
+        emergency_stop_loss=300,
+        take_profit=25,
+        emergency_take_profit=300,
+        start_time="00:00",
+        finishing_time="23:59",
+        ending_time="23:59",
+        fee=0.5,
+    )
+
+    logger.info(f"Starting crazy buying strategy on {trade.symbol}")
+
+    # Strategy parameters
+    prev_tick_time = 0
+    prev_bar_time = 0
+    prev_signal = 'hold'
+
+
     try:
         while True:
-            msg = conn.recv(8192).decode()
-            if msg != "":
-                print("[INFO]\tMessage:", msg)
-                rate_queue.put(msg)
-    except ConnectionError:
-        print("[INFO]\tread lost connection to ", addr)
+            # Prepare the symbol for trading
+            trade.prepare_symbol()
 
-def write(conn, addr):
-    try:
-        while True:
-            conn.send("hi\n".encode())
-            time.sleep(3)
-    except ConnectionError:
-        print("[INFO]\twrite lost connection to ", addr)
+            # Fetch tick and rates data
+            current_tick = Tick(trade.symbol)
 
-def to_tensor():
-    while True:
-        rates = rate_queue.get()
-        print(rates)
-        tensor_queue.put(msg_to_tensor(rates))
+            has_new_tick = current_tick.time_msc != prev_tick_time
 
+            if has_new_tick:
+                historical_rates = Rates(trade.symbol, 1, 0, WINDOW_SIZE + 1)  # Get extra data for reliability
+                has_enough_data = len(historical_rates.close) >= WINDOW_SIZE + 1
 
-def floor_time(dt, seconds=60):
-    """Rounds down a datetime to nearest interval."""
-    return dt - timedelta(seconds=dt.second % seconds,
-                          microseconds=dt.microsecond)
+                signal = 'hold'
+                should_buy, should_sell = False, False
+                if (has_enough_data):
+                    current_bar_time = historical_rates.time[-1]
+                    if current_bar_time == prev_bar_time:
+                        signal = gru_strategy(historical_rates.close)
+                        if signal == prev_signal:
+                            continue
+                        print(signal)
+                        should_buy, should_sell = (signal == 'buy'), (signal == 'sell')
 
-# def compressor(resolution=60):
-#     bars = {}
-#     bar = {}
-#     current_bar_time = None
+                    else:
+                        # new bar formed
+                        signal = gru_strategy(historical_rates.close)
+                        print(signal)
+                        should_buy, should_sell = (signal == 'buy'), (signal == 'sell')
+                        prev_bar_time = current_bar_time  # Update bar time
 
-#     while True:
-#         tick = tick_queue.get()
-#         price = list(tick.values())[0]  # Assuming tick is like {'price': ...}
+                    prev_signal = signal
 
-#         tick_time = datetime.now(timezone.utc)
-#         bar_time = floor_time(tick_time, resolution)
+                # Execute trading positions based on signals
+                if trade.trading_time():  # Only trade during allowed hours
+                    trade.open_position(
+                        should_buy=should_buy,
+                        should_sell=should_sell,
+                        comment="Crazy"
+                    )
 
-#         # New bar started
-#         if current_bar_time is None or bar_time > current_bar_time:
-#             if bar:
-#                 bar_queue.put(bar.copy())
-#                 bars[current_bar_time] = bar.copy()
-#                 print(f"[BAR @ {current_bar_time}] {bar}")
+                # Update trading statistics periodically
+                trade.statistics()
 
-#             # start new bar
-#             bar = {
-#                 'open': price,
-#                 'high': price,
-#                 'low': price,
-#                 'close': price,
-#             }
-#             current_bar_time = bar_time
-#         else:
-#             # Update current bar
-#             try:
-#                 bar['high'] = max(bar['high'], price)
-#                 bar['low'] = min(bar['low'], price)
-#                 bar['close'] = price
-#             except:
-#                 print('first bar forming')
+            prev_tick_time = current_tick.time_msc
 
-
-def gru_strategy():
-
-    while True:
-        with torch.no_grad():
-            x = tensor_queue.get()
-            prediction = model(x)
-            print(x, prediction)
-
-
-def msg_to_tick(msg: str):
-    tick = {}
-    values = msg.rstrip("\n").split(',')
-    ts = datetime.fromtimestamp(float(values[1]) / 1000.0)
-    tick[ts] = values[2]
-    return tick
-
-
-def msg_to_tensor(msg: str):
-    # msg: symbol,timestamp,close1,close2,...,closeN
-    data = msg.strip().split(',')[2:]
-    closes = np.array(data, dtype=np.float32)
-    delta = np.diff(closes)
-    pct_delta = delta / closes[:-1]
-
-    pct_delta = pct_delta.reshape(-1, 1)  # (seq_len, 1)
-
-    pct_delta_scaled = scaler.transform(pct_delta)
-
-    seq = pct_delta_scaled.reshape(1, -1, 1)  # (batch_size=1, seq_len, feature_dim=1)
-    tensor = torch.FloatTensor(seq)
-    return tensor
-
-
-def main():
-
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(("127.0.0.1", 8888))
-    server.listen(10)
-    try:
-        connection, address = server.accept()
-        print("[INFO]\tConnection established with: ", address)
-
-        thread_read = threading.Thread(target=read_rate, args=(connection, address))
-        thread_read.start()
-
-        thread_write = threading.Thread(target=write, args=(connection, address))
-        thread_write.start()
-
-        thread_tensor = threading.Thread(target=to_tensor)
-        thread_tensor.start()
-
-        # thread_compressor = threading.Thread(target=compressor, args=(resolution,))
-        # thread_compressor.start()
-
-        thread_strategy = threading.Thread(target=gru_strategy)
-        thread_strategy.start()
+            # Check if it's the end of the trading day
+            if trade.days_end():
+                trade.close_position("End of the trading day reached.")
+                break
 
     except KeyboardInterrupt:
-        print("Shutting down server.")
-        server.close()
+        logger.info("Strategy execution interrupted by user.")
+        trade.close_position("User interrupted the strategy.")
+    except Exception:
+        logger.exception("Error in strategy execution")
+    finally:
+        logger.info("Finishing the program.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

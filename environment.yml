@@ -17,3 +17,7 @@ dependencies:
   - scikit-learn
   - jupyter
   - seaborn
+  - pip
+  - pip:
+      - MetaTrader5
+      - mqpy

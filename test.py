@@ -9,14 +9,14 @@ from models.gru_model import GRUModule
 from utils import get_sequence_start_indices
 
 # === CONFIG ===
-CHECKPOINT_PATH = r'lightning_logs\prob_gru\version_5\checkpoints\best_checkpoint.ckpt'
+CHECKPOINT_PATH = r'lightning_logs\prob_gru\version_6\checkpoints\best_checkpoint.ckpt'
 SCALER_PATH='standard_scaler.pkl'
 DATA_PATH = "./data/processed/usdjpy-bar-2020-01-01-2024-12-31_processed.pkl"
 FEATURES_COLS = ['close_return']
 SEQUENCE_LENGTH = 30
 TARGET_COLS = ['prob_down', 'prob_flat', 'prob_up']
 HORIZON = 1
-STRIDE = 5
+STRIDE = 1
 
 def plot_prediction(y_pred, y_true=None, title="Prediction"):
     # mu = mu.squeeze().cpu()

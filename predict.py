@@ -3,7 +3,7 @@ import torch
 from models.gru_model import GRUModule
 
 
-CHECKPOINT_PATH = r'lightning_logs\prob_gru\version_5\checkpoints\best_checkpoint.ckpt'
+CHECKPOINT_PATH = r'lightning_logs\prob_gru\version_6\checkpoints\best_checkpoint.ckpt'
 
 def main():
     model = GRUModule.load_from_checkpoint(CHECKPOINT_PATH)
