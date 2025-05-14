@@ -19,7 +19,7 @@ SEQUENCE_LENGTH=30
 HORIZON=1
 STRIDE=5
 FEATURES_COLS = ['close_return']
-TARGET_COLS = ['prob_down', 'prob_flat', 'prob_up']
+TARGET_COLS = ['label']
 def main():
     df = pd.read_pickle(PKL_PATH)
 
@@ -46,10 +46,10 @@ def main():
     # Initialize GRU module
     model = GRUModule(
         n_features=len(FEATURES_COLS),
-        output_size=len(TARGET_COLS),
+        output_size=3,
         n_hidden=256,
         n_layers=3,
-        dropout=0.3,
+        dropout=0.8,
     )
 
     # Start Logger
@@ -60,7 +60,7 @@ def main():
     early_stopping = EarlyStopping(
         monitor='val_loss',
         mode='min',
-        patience=10,
+        patience=5,
         verbose=True
     )
 

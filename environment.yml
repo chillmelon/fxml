@@ -18,6 +18,11 @@ dependencies:
   - jupyter
   - seaborn
   - pip
+  - sqlite
+  - mplfinance
+  - ta
+  - TA-Lib
   - pip:
       - MetaTrader5
       - mqpy
+      - backtesting

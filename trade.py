@@ -55,8 +55,8 @@ def main() -> None:
     trade = Trade(
         expert_name="Crazy Buy",
         version="1.0",
-        symbol="USDJPY",
-        magic_number=567,
+        symbol="USDJPY.sml",
+        magic_number=5678,
         lot=0.1,
         stop_loss=25,
         emergency_stop_loss=300,

@@ -21,7 +21,8 @@ class GRUModel(nn.Module):
         self.gru.flatten_parameters()
         _, hidden = self.gru(x)
         logits = self.linear(hidden[-1])
-        return self.softmax(logits)
+        # return self.softmax(logits)
+        return logits
 
 
 class GRUModule(pl.LightningModule):
@@ -37,12 +38,13 @@ class GRUModule(pl.LightningModule):
             dropout=self.hparams.dropout,
         )
 
-        self.criterion = nn.MSELoss()
+        self.criterion = nn.CrossEntropyLoss()
 
     def forward(self, x, labels=None):
         output = self.model(x)
         loss = 0
         if labels is not None:
+            labels = labels.squeeze().long()
             loss = self.criterion(output, labels)
         return loss, output
 
@@ -74,6 +76,6 @@ class GRUModule(pl.LightningModule):
         }
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
         return [optimizer], [scheduler]

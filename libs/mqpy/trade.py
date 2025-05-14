@@ -306,46 +306,11 @@ class Trade:
         Returns:
             bool: True if the position was closed successfully, False otherwise.
         """
-        positions = Mt5.positions_get(ticket=ticket)
-
-        if not positions:
-            logger.warning(f"No position found with ticket {ticket}")
-            return False
-
-        position = positions[0]
-
-        # Determine the opposite operation type for closing
-        if position.type == Mt5.POSITION_TYPE_BUY:
-            deal_type = Mt5.ORDER_TYPE_SELL
-            price = Mt5.symbol_info_tick(self.symbol).bid
-        else:
-            deal_type = Mt5.ORDER_TYPE_BUY
-            price = Mt5.symbol_info_tick(self.symbol).ask
-
-        # Create request to close the position
-        request = {
-            "action": Mt5.TRADE_ACTION_DEAL,
-            "symbol": position.symbol,
-            "volume": position.volume,
-            "type": deal_type,
-            "position": position.ticket,
-            "price": price,
-            "deviation": 5,
-            "magic": self.magic_number,
-            "comment": f"Close {comment}",
-            "type_time": Mt5.ORDER_TIME_GTC,
-            "type_filling": Mt5.ORDER_FILLING_FOK,
-        }
-
-        result = Mt5.order_send(request)
-
-        if result.retcode != Mt5.TRADE_RETCODE_DONE:
-            logger.error(f"Failed to close position {ticket}, error: {result.retcode}")
-            return False
-
-        logger.info(f"Position {ticket} closed at price {price}")
-        return True
-
+        result =  Mt5.Close(symbol=self.symbol, ticket=ticket)
+        if result:
+            logger.info(f"Position {ticket} closed successfully")
+            return True
+        return False
 
 
     def open_position(self, *, should_buy: bool, should_sell: bool, comment: str = "") -> Optional[int]:
@@ -392,6 +357,7 @@ class Trade:
         closed_count = 0
 
         for position in positions:
+            Mt5.Close(symbol=self.symbol, ticket=int(position.ticket))
             if self.close_position_by_ticket(position.ticket, comment):
                 closed_count += 1
 
