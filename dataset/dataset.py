@@ -13,6 +13,11 @@ class ForexDataset(Dataset):
         self.horizon = horizon
         self.feature_data = data[features]
         self.target_data = data[target]
+
+        first_idx = IDs[0]
+        print(data.loc[first_idx:first_idx+sequence_length-1])
+        print(data.loc[first_idx+sequence_length+horizon-1])
+
     def __len__(self):
         return len(self.IDs)
 
@@ -20,7 +25,7 @@ class ForexDataset(Dataset):
         i = self.IDs[idx]
 
         # Extract feature sequence
-        X = self.feature_data.loc[i:i + self.sequence_length].values.astype(dtype='float32')
+        X = self.feature_data.loc[i:i + self.sequence_length - 1].values.astype(dtype='float32')
 
         # Extract target(s)
         y = self.target_data.loc[i + self.sequence_length + self.horizon - 1].values.astype(dtype='float32')
