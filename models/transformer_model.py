@@ -1,11 +1,12 @@
 import torch
 from torch import nn
 import lightning as pl
+from torch._prims_common import Dim
 from torchmetrics.classification import MulticlassAccuracy
 
 
 class TransformerModel(nn.Module):
-    def __init__(self, n_features, output_size, d_model=64, nhead=4, num_layers=2, dropout=0.1):
+    def __init__(self, n_features, output_size, d_model=64, nhead=4, num_layers=2, dim_feedforward=128, dropout=0.1):
         super().__init__()
 
         self.input_proj = nn.Linear(n_features, d_model)
@@ -14,6 +15,7 @@ class TransformerModel(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
             nhead=nhead,
+            dim_feedforward=dim_feedforward,
             dropout=dropout,
             batch_first=True
         )
@@ -49,7 +51,7 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerModule(pl.LightningModule):
-    def __init__(self, n_features=1, output_size=3, d_model=64, nhead=4, num_layers=2, dropout=0.1):
+    def __init__(self, n_features=1, output_size=3, d_model=64, nhead=4, num_layers=2, dim_feedforward=128, dropout=0.1):
         super().__init__()
         self.save_hyperparameters()
 
@@ -59,16 +61,17 @@ class TransformerModule(pl.LightningModule):
             d_model=self.hparams.d_model,
             nhead=self.hparams.nhead,
             num_layers=self.hparams.num_layers,
+            dim_feedforward=self.hparams.dim_feedforward,
             dropout=self.hparams.dropout
         )
 
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
 
     def forward(self, x, labels=None):
         output = self.model(x)
         loss = 0
         if labels is not None:
-            labels = labels.squeeze().long()
+            labels = labels.view(-1).long()
             loss = self.criterion(output, labels)
         return loss, output
 
@@ -91,6 +94,6 @@ class TransformerModule(pl.LightningModule):
         return {'loss': loss}
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3, weight_decay=1e-5)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
         return [optimizer], [scheduler]

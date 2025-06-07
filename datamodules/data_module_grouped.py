@@ -1,18 +1,18 @@
 import lightning as L
 from torch.utils.data import DataLoader, Subset
 import pandas as pd
-from sklearn.model_selection import StratifiedShuffleSplit
 
-from dataset.dataset import ForexDataset
+from dataset.grouped_dataset import GroupedForexDataset
 
-class ForexDataModule(L.LightningDataModule):
+class GroupedForexDataModule(L.LightningDataModule):
     def __init__(
         self,
         data,
+        IDs: list,
         sequence_length: int,
+        horizon: int,
         features: list,
         target: list,
-        stride: int = 1,
         batch_size: int = 64,
         num_workers: int = 0,
         val_split: float = 0.2,
@@ -20,12 +20,12 @@ class ForexDataModule(L.LightningDataModule):
         random_state: int = 42
     ):
         super().__init__()
-        self.save_hyperparameters(ignore=["data"])
-        self.data = data[features + target]
+        self.data = data
+        self.IDs = IDs
         self.sequence_length = sequence_length
+        self.horizon = horizon
         self.features = features
         self.target = target
-        self.stride = stride
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.val_split = val_split
@@ -33,18 +33,22 @@ class ForexDataModule(L.LightningDataModule):
         self.random_state = random_state
 
     def setup(self, stage=None):
-        # data_clean= self.data.copy()
-        # Stratified split
-        sss = StratifiedShuffleSplit(n_splits=1, test_size=self.val_split, random_state=self.random_state)
-        y = self.data[self.target]
-        train_idx, val_idx = next(sss.split(self.data, y))
+        from sklearn.model_selection import train_test_split
+        print(f"Setting up {len(self.IDs)} sequences")
+        train_idx, val_idx = train_test_split(
+            self.IDs,
+            test_size=self.val_split,
+            shuffle=self.shuffle,
+            random_state=self.random_state
+        )
 
-        train_df = self.data.iloc[train_idx].reset_index(drop=True)
-        val_df = self.data.iloc[val_idx].reset_index(drop=True)
+        self.train_dataset = GroupedForexDataset(
+            self.data, train_idx, self.sequence_length, self.horizon, self.features, self.target
+        )
 
-        self.train_dataset = ForexDataset(train_df, self.sequence_length, self.features, self.target, self.stride)
-        self.val_dataset = ForexDataset(val_df, self.sequence_length, self.features, self.target)
-
+        self.val_dataset = GroupedForexDataset(
+            self.data, val_idx, self.sequence_length, self.horizon, self.features, self.target
+        )
 
     def train_dataloader(self):
         return DataLoader(
@@ -52,8 +56,7 @@ class ForexDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.num_workers,
-            pin_memory=(self.num_workers > 0),
-            persistent_workers=(self.num_workers > 0),
+            pin_memory=True
         )
 
     def val_dataloader(self):
@@ -62,8 +65,7 @@ class ForexDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
-            pin_memory=(self.num_workers > 0),
-            persistent_workers=(self.num_workers > 0),
+            pin_memory=True
         )
 
     def test_dataloader(self):
@@ -72,5 +74,5 @@ class ForexDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
-            pin_memory=(self.num_workers > 0)
+            pin_memory=True
         )

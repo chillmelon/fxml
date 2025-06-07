@@ -1,0 +1,68 @@
+# Default configuration for forex prediction experiments
+
+# Data configuration (preparation phase)
+data:
+  raw: data/compressed/usdjpy-bar-processed-2020-01-01-2024-12-31.csv
+  dir: data/processed
+  raw_dir: data
+  raw_file: usdjpy-bar-processed-2020-01-01-2024-12-31.csv
+  train_file: train.csv
+  val_file: val.csv
+  test_file: test.csv
+  scaler_file: scaler.pkl
+  sequence_length: 30 # Number of time steps to use as input
+  target_horizon: 1 # Number of time steps to predict ahead
+  date_column: timestamp
+  add_delta: true
+  add_technical_indicators: true
+  add_time_features: false
+  features:
+    - close
+    #- ema7
+    #- ema14
+  target: close_pct_delta
+  split_ratio:
+    - 0.8
+    - 0.1
+    - 0.1 # Train/Val/Test split if using a single file
+  normalization: standard # 'standard', 'minmax', or 'robust'
+
+# Model configuration
+model:
+  type: gru # 'lstm', 'gru', 'tcn', 'transformer'
+  hidden_size: 64
+  num_layers: 1
+  dropout: 0.2
+  bidirectional: false
+  attention: false
+
+# Training configuration
+training:
+  epochs: 200
+  batch_size: 64
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  early_stopping_patience: 10
+  optimizer: adam # 'adam', 'sgd', 'rmsprop'
+  scheduler: step # 'plateau', 'step', 'cosine', or null
+  lr_scheduler_patience: 5
+  lr_scheduler_factor: 0.5
+  gradient_clipping: 1.0
+
+# Output configuration
+output:
+  dir: outputs
+  model_filename: usdjpy_model.pt
+
+logging:
+  dir: logs/usdjpy_runs
+  tensorboard: true
+  log_interval: 5
+  save_checkpoints: true
+  checkpoint_interval: 10
+
+hardware:
+  cuda: true
+  num_workers: 1
+  pin_memory: true # Accelerates data transfer to GPU
+  mixed_precision: true

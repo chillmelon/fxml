@@ -15,13 +15,11 @@ class GRUModel(nn.Module):
             dropout=dropout
         )
         self.linear = nn.Linear(n_hidden, output_size)
-        self.softmax = nn.Softmax(1)
 
     def forward(self, x):
         self.gru.flatten_parameters()
         _, hidden = self.gru(x)
         logits = self.linear(hidden[-1])
-        # return self.softmax(logits)
         return logits
 
 
@@ -44,7 +42,7 @@ class GRUModule(pl.LightningModule):
         output = self.model(x)
         loss = 0
         if labels is not None:
-            labels = labels.squeeze().long()
+            labels = labels.view(-1).long()
             loss = self.criterion(output, labels)
         return loss, output
 

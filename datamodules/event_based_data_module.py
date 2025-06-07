@@ -3,16 +3,16 @@ from torch.utils.data import DataLoader, Subset
 import pandas as pd
 from sklearn.model_selection import StratifiedShuffleSplit
 
-from dataset.dataset import ForexDataset
+from dataset.event_based_dataset import EventBasedDataset
 
-class ForexDataModule(L.LightningDataModule):
+class EventBasedDataModule(L.LightningDataModule):
     def __init__(
         self,
         data,
+        labels,
         sequence_length: int,
         features: list,
-        target: list,
-        stride: int = 1,
+        target: str,
         batch_size: int = 64,
         num_workers: int = 0,
         val_split: float = 0.2,
@@ -20,12 +20,12 @@ class ForexDataModule(L.LightningDataModule):
         random_state: int = 42
     ):
         super().__init__()
-        self.save_hyperparameters(ignore=["data"])
-        self.data = data[features + target]
+        self.save_hyperparameters(ignore=["data", "labels"])
+        self.data = data[features]
+        self.labels = labels[target]
         self.sequence_length = sequence_length
         self.features = features
         self.target = target
-        self.stride = stride
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.val_split = val_split
@@ -33,18 +33,28 @@ class ForexDataModule(L.LightningDataModule):
         self.random_state = random_state
 
     def setup(self, stage=None):
-        # data_clean= self.data.copy()
-        # Stratified split
-        sss = StratifiedShuffleSplit(n_splits=1, test_size=self.val_split, random_state=self.random_state)
-        y = self.data[self.target]
-        train_idx, val_idx = next(sss.split(self.data, y))
+        # sort by time index to maintain temporal order
+        sorted_events = self.labels.sort_index()
+        n_val = int(len(sorted_events) * self.val_split)
 
-        train_df = self.data.iloc[train_idx].reset_index(drop=True)
-        val_df = self.data.iloc[val_idx].reset_index(drop=True)
+        val_events = sorted_events.iloc[-n_val:]
+        train_events = sorted_events.iloc[:-n_val]
 
-        self.train_dataset = ForexDataset(train_df, self.sequence_length, self.features, self.target, self.stride)
-        self.val_dataset = ForexDataset(val_df, self.sequence_length, self.features, self.target)
+        self.train_dataset = EventBasedDataset(
+            data=self.data,
+            events=train_events,
+            sequence_length=self.sequence_length,
+            features_cols=self.features,
+            target_col=self.target,
+        )
 
+        self.val_dataset = EventBasedDataset(
+            data=self.data,
+            events=val_events,
+            sequence_length=self.sequence_length,
+            features_cols=self.features,
+            target_col=self.target,
+        )
 
     def train_dataloader(self):
         return DataLoader(

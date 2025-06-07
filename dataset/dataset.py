@@ -1,33 +1,33 @@
-from pandas.core.generic import dt
 import torch
 from torch.utils.data import Dataset
 import numpy as np
 
 class ForexDataset(Dataset):
-    """Dataset for sequence classification/forecasting with multi-step horizon."""
-
-    def __init__(self, data, IDs, sequence_length, horizon, features, target):
-        self.data = data
-        self.IDs = IDs
+    def __init__(self, data, sequence_length, features, target, stride=1):
+        self.data = data.reset_index(drop=True)
         self.sequence_length = sequence_length
-        self.horizon = horizon
-        self.feature_data = data[features]
-        self.target_data = data[target]
+        self.features = features
+        self.target = target
+        self.stride = stride
 
-        first_idx = IDs[0]
-        print(data.loc[first_idx:first_idx+sequence_length-1])
-        print(data.loc[first_idx+sequence_length+horizon-1])
+        # Convert features/labels to NumPy for fast slicing
+        self.feature_data = data[features].to_numpy(dtype=np.float32)
+        self.target_data = data[target].to_numpy(dtype=np.int64)
+
+        # Precompute valid sequence start indices
+        self.indices = self._generate_indices()
+        print('done initializing dataset')
+
+    def _generate_indices(self):
+        # Sequences must have sequence_length + 1 (for target)
+        max_start = len(self.data) - self.sequence_length - 1
+        return list(range(0, max_start + 1, self.stride))
 
     def __len__(self):
-        return len(self.IDs)
+        return len(self.indices)
 
-    def __getitem__(self, idx):
-        i = self.IDs[idx]
-
-        # Extract feature sequence
-        X = self.feature_data.loc[i:i + self.sequence_length - 1].values.astype(dtype='float32')
-
-        # Extract target(s)
-        y = self.target_data.loc[i + self.sequence_length + self.horizon - 1].values.astype(dtype='float32')
-
-        return torch.from_numpy(X), torch.from_numpy(y), i
+    def __getitem__(self, i):
+        idx = self.indices[i]
+        X = self.feature_data[idx : idx + self.sequence_length]
+        y = self.target_data[idx + self.sequence_length]  # classification target
+        return torch.from_numpy(X), torch.tensor(y, dtype=torch.long), idx

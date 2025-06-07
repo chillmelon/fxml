@@ -3,17 +3,17 @@ import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
 from torch.utils.data import DataLoader
-from dataset.dataset import ForexDataset
+from dataset.dataset import GroupedForexDataset
 from models.gru_model import GRUModule
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 from utils import get_sequence_start_indices
 
 # === CONFIG ===
-CHECKPOINT_PATH = r'lightning_logs\prob_gru\version_9\checkpoints\best_checkpoint.ckpt'
+CHECKPOINT_PATH = r'lightning_logs\gru_3barrier_clas\version_0\checkpoints\best_checkpoint.ckpt'
 SCALER_PATH='standard_scaler.pkl'
 DATA_PATH = "./data/processed/usdjpy-bar-2025-01-01-2025-05-12_processed.pkl"
-FEATURES_COLS = ['close_return']
+FEATURES_COLS = ['close_log_return']
 SEQUENCE_LENGTH = 30
 TARGET_COLS = ['label']
 HORIZON = 1
@@ -69,7 +69,7 @@ def main():
         group_col='time_group',
     )
 
-    test_dataset = ForexDataset(
+    test_dataset = GroupedForexDataset(
         df, IDs, SEQUENCE_LENGTH, HORIZON, FEATURES_COLS, TARGET_COLS
     )
 
