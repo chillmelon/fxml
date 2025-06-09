@@ -1,7 +1,7 @@
+import lightning as pl
 import torch
 from torch import nn
-import lightning as pl
-from torchmetrics.classification import MulticlassAccuracy
+
 
 class GRUModel(nn.Module):
     def __init__(self, n_features, output_size, n_hidden, n_layers, dropout):
@@ -12,7 +12,7 @@ class GRUModel(nn.Module):
             hidden_size=n_hidden,
             num_layers=n_layers,
             batch_first=True,
-            dropout=dropout
+            dropout=dropout,
         )
         self.linear = nn.Linear(n_hidden, output_size)
 
@@ -24,7 +24,9 @@ class GRUModel(nn.Module):
 
 
 class GRUModule(pl.LightningModule):
-    def __init__(self, n_features=1, output_size=1, n_hidden=64, n_layers=2, dropout=0.0):
+    def __init__(
+        self, n_features=1, output_size=1, n_hidden=64, n_layers=2, dropout=0.0
+    ):
         super().__init__()
         self.save_hyperparameters()
 
@@ -50,28 +52,22 @@ class GRUModule(pl.LightningModule):
         x, y, _ = batch
         loss, out = self(x, y)
 
-        self.log('train_loss', loss, prog_bar=True, logger=True)
-        return {
-            'loss': loss
-        }
+        self.log("train_loss", loss, prog_bar=True, logger=True)
+        return {"loss": loss}
 
     def validation_step(self, batch, batch_idx):
         x, y, _ = batch
         loss, out = self(x, y)
 
-        self.log('val_loss', loss, prog_bar=True, logger=True)
-        return {
-            'loss': loss
-        }
+        self.log("val_loss", loss, prog_bar=True, logger=True)
+        return {"loss": loss}
 
     def test_step(self, batch, batch_idx):
         x, y, _ = batch
         loss, out = self(x, y)
 
-        self.log('test_loss', loss, prog_bar=True, logger=True)
-        return {
-            'loss': loss
-        }
+        self.log("test_loss", loss, prog_bar=True, logger=True)
+        return {"loss": loss}
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)

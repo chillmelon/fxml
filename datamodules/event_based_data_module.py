@@ -1,9 +1,8 @@
 import lightning as L
-from torch.utils.data import DataLoader, Subset
-import pandas as pd
-from sklearn.model_selection import StratifiedShuffleSplit
+from torch.utils.data import DataLoader
 
 from dataset.event_based_dataset import EventBasedDataset
+
 
 class EventBasedDataModule(L.LightningDataModule):
     def __init__(
@@ -17,12 +16,12 @@ class EventBasedDataModule(L.LightningDataModule):
         num_workers: int = 0,
         val_split: float = 0.2,
         shuffle: bool = True,
-        random_state: int = 42
+        random_state: int = 42,
     ):
         super().__init__()
         self.save_hyperparameters(ignore=["data", "labels"])
-        self.data = data[features]
-        self.labels = labels[target]
+        self.data = data
+        self.labels = labels
         self.sequence_length = sequence_length
         self.features = features
         self.target = target
@@ -82,5 +81,5 @@ class EventBasedDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
-            pin_memory=(self.num_workers > 0)
+            pin_memory=(self.num_workers > 0),
         )

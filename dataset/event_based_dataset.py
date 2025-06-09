@@ -1,10 +1,18 @@
-import torch
-from torch.utils.data import Dataset
 import numpy as np
 import pandas as pd
+import torch
+from torch.utils.data import Dataset
+
 
 class EventBasedDataset(Dataset):
-    def __init__(self, data: pd.DataFrame, events: pd.DataFrame, sequence_length: int, features_cols: list, target_col: str):
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        events: pd.DataFrame,
+        sequence_length: int,
+        features_cols: list,
+        target_col: str,
+    ):
         """
         data: DataFrame with indexed datetime and full market data (must contain all feature and target columns)
         events: DataFrame with event index (timestamps) and target column
@@ -34,6 +42,7 @@ class EventBasedDataset(Dataset):
                 continue  # Not enough history
 
             seq = self.raw_data.iloc[start_idx:end_idx][self.features_cols].values
+
             label = self.events.loc[event_time, self.target_col]
 
             if len(seq) == self.sequence_length:
@@ -43,9 +52,12 @@ class EventBasedDataset(Dataset):
 
         return np.array(X, dtype=np.float32), np.array(y), pd.Index(valid_t_events)
 
-
     def __len__(self):
         return len(self.t_events)
 
     def __getitem__(self, i):
-        return torch.from_numpy(self.X[i]), torch.tensor(self.y[i], dtype=torch.long), self.t_events[i]
+        return (
+            torch.from_numpy(self.X[i]),
+            torch.tensor(self.y[i], dtype=torch.long),
+            str(self.t_events[i]),
+        )
