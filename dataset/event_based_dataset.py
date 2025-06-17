@@ -59,5 +59,5 @@ class EventBasedDataset(Dataset):
         return (
             torch.from_numpy(self.X[i]),
             torch.tensor(self.y[i], dtype=torch.long),
-            str(self.t_events[i]),
+            i,
         )

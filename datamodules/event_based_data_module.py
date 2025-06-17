@@ -1,4 +1,7 @@
+from collections import Counter
+
 import lightning as L
+import torch
 from torch.utils.data import DataLoader
 
 from dataset.event_based_dataset import EventBasedDataset
@@ -54,6 +57,14 @@ class EventBasedDataModule(L.LightningDataModule):
             features_cols=self.features,
             target_col=self.target,
         )
+
+        labels = self.train_dataset.y
+        counts = Counter(labels)
+        total = sum(counts.values())
+        num_classes = len(counts)
+
+        weights = [total / (num_classes * counts[i]) for i in range(num_classes)]
+        self.class_weights = torch.tensor(weights, dtype=torch.float32)
 
     def train_dataloader(self):
         return DataLoader(

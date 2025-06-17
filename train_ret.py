@@ -10,23 +10,38 @@ from lightning.pytorch.profilers import SimpleProfiler
 
 from datamodules.event_based_data_module import EventBasedDataModule
 from models.classification.gru_model import GRUModule
+from models.classification.t2v_transformer_model import T2VTransformerModule
 from models.classification.transformer_model import TransformerModule
 
 # Configurable parts
-MODEL_NAME = "gru"
+MODEL_NAME = "gru_regr"
 SOURCE = "dukascopy"
 SYMBOL = "usdjpy"
 MINUTES = 1
 START_DATE = "2020-01-01"
 END_DATE = "2024-12-31"
 EVENT_NAME = "cusum_filter"
-SEQUENCE_LENGTH = 24
+SEQUENCE_LENGTH = 48
+TIME_COLS = [
+    # 'timestamp',
+    # "hour",
+    # "dow",
+    # "dom",
+    # "month",
+    "open",
+    "high",
+    "low",
+    "close",
+]
 FEATURES_COLS = [
     # Basic Data
     "close_log_return",
     "log_volume",
+    "macd",
+    "macd_signal",
+    "macd_diff",
 ]
-TARGET_COL = "bin"
+TARGET_COL = "ret"
 
 
 # Build base name
@@ -47,9 +62,12 @@ DIRECTION_LABEL_FILE_PATH = DIRECTION_LABEL_DIR / f"{RESAMPLED_NAME}-{EVENT_NAME
 
 def main():
     df = pd.read_pickle(PROCESSED_FILE_PATH)
+    print(df.head())
     label_df = pd.read_pickle(DIRECTION_LABEL_FILE_PATH)
 
     print(df.loc[label_df.index].head())
+
+    print(label_df[TARGET_COL].describe())
 
     dm = EventBasedDataModule(
         data=df,
@@ -64,7 +82,7 @@ def main():
     # Initialize GRU module
     model = GRUModule(
         n_features=len(FEATURES_COLS),
-        output_size=3,
+        output_size=1,
         n_hidden=64,
         n_layers=2,
         dropout=0.6,
@@ -77,7 +95,7 @@ def main():
     profiler = SimpleProfiler(filename="profiler")
 
     early_stopping = EarlyStopping(
-        monitor="val_loss", mode="min", patience=10, verbose=True
+        monitor="val_loss", mode="min", patience=5, verbose=True
     )
 
     checkpoint_callback = ModelCheckpoint(

@@ -1,7 +1,7 @@
 import lightning as pl
 import torch
 from torch import nn
-from torch._prims_common import Dim
+from torchmetrics.classification import MulticlassAccuracy
 
 
 class TransformerModel(nn.Module):
@@ -87,7 +87,9 @@ class TransformerModule(pl.LightningModule):
             dropout=self.hparams.dropout,
         )
 
-        self.criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+        self.criterion = nn.CrossEntropyLoss()
+        self.train_acc = MulticlassAccuracy(num_classes=self.hparams.output_size)
+        self.val_acc = MulticlassAccuracy(num_classes=self.hparams.output_size)
 
     def forward(self, x, labels=None):
         output = self.model(x)
@@ -98,24 +100,34 @@ class TransformerModule(pl.LightningModule):
         return loss, output
 
     def training_step(self, batch, batch_idx):
-        x, y, _ = batch
+        x, y, idx = batch
         loss, out = self(x, y)
+
+        preds = torch.argmax(out, dim=1)
+        acc = self.train_acc(preds, y)
+
         self.log("train_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
+        self.log("train_acc", acc, prog_bar=True, logger=True)
+        return {"loss": loss, "acc": acc}
 
     def validation_step(self, batch, batch_idx):
         x, y, _ = batch
         loss, out = self(x, y)
+
+        preds = torch.argmax(out, dim=1)
+        acc = self.train_acc(preds, y)
+
         self.log("val_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
+        self.log("val_acc", acc, prog_bar=True, logger=True)
+        return {"loss": loss, "acc": acc}
 
     def test_step(self, batch, batch_idx):
         x, y, _ = batch
         loss, out = self(x, y)
         self.log("test_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
+        return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4, weight_decay=1e-5)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3, weight_decay=1e-5)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
         return [optimizer], [scheduler]
