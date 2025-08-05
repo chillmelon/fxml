@@ -4,7 +4,7 @@ import lightning as L
 import torch
 from torch.utils.data import DataLoader
 
-from dataset.event_based_dataset import EventBasedDataset
+from dataset.direction_dataset import DirectionDataset
 
 
 class EventBasedDataModule(L.LightningDataModule):
@@ -42,7 +42,7 @@ class EventBasedDataModule(L.LightningDataModule):
         val_events = sorted_events.iloc[-n_val:]
         train_events = sorted_events.iloc[:-n_val]
 
-        self.train_dataset = EventBasedDataset(
+        self.train_dataset = DirectionDataset(
             data=self.data,
             events=train_events,
             sequence_length=self.sequence_length,
@@ -50,7 +50,7 @@ class EventBasedDataModule(L.LightningDataModule):
             target_col=self.target,
         )
 
-        self.val_dataset = EventBasedDataset(
+        self.val_dataset = DirectionDataset(
             data=self.data,
             events=val_events,
             sequence_length=self.sequence_length,

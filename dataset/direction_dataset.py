@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-class EventBasedDataset(Dataset):
+class DirectionDataset(Dataset):
     def __init__(
         self,
         data: pd.DataFrame,
