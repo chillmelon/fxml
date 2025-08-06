@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+import torch
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
@@ -153,6 +154,7 @@ def main():
         # gradient_clip_val=1.0,
         # num_sanity_val_steps=0,
     )
+    torch.set_float32_matmul_precision("high")
     trainer.fit(model, datamodule=dm)
 
 
