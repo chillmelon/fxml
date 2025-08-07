@@ -143,9 +143,15 @@ def main():
         mode="min",
     )
 
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+
     # Training
     trainer = Trainer(
-        accelerator="mps",
+        accelerator=device,
         devices=1,
         profiler=profiler,
         callbacks=[checkpoint_callback, early_stopping],
