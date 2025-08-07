@@ -25,15 +25,17 @@ class DirectionDataset(Dataset):
         self.sequence_length = sequence_length
         self.features_cols = features_cols
         self.target_col = target_col
+        self.features = data[features_cols]
 
         self.t_events = events.index
         self.X, self.y, self.t_events = self._create_sequences()
 
     def _create_sequences(self):
+        print("----- Start Creating Sequences -----")
         X, y, valid_t_events = [], [], []
         for event_time in self.t_events:
             try:
-                end_idx: int = int(self.raw_data.index.get_loc(event_time))
+                end_idx: int = int(self.raw_data.index.searchsorted(event_time))
             except (KeyError, TypeError):
                 continue  # Skip if event_time not in index or invalid
 
@@ -41,7 +43,7 @@ class DirectionDataset(Dataset):
             if start_idx < 0:
                 continue  # Not enough history
 
-            seq = self.raw_data.iloc[start_idx:end_idx][self.features_cols].values
+            seq = self.features.iloc[start_idx:end_idx].values
 
             label = self.events.loc[event_time, self.target_col]
 
@@ -50,6 +52,7 @@ class DirectionDataset(Dataset):
                 y.append(label)
                 valid_t_events.append(event_time)  # Keep only used event times
 
+        print("----- End Creating Sequences -----")
         return np.array(X, dtype=np.float32), np.array(y), pd.Index(valid_t_events)
 
     def __len__(self):
