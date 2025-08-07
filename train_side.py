@@ -90,7 +90,7 @@ def main():
         target=TARGET_COL,
         batch_size=256,
     )
-    dm.setup()
+    # dm.setup()
 
     # Initialize GRU module
     # model = GRUModule(
@@ -120,7 +120,7 @@ def main():
         nhead=4,
         dim_feedforward=256,
         kernel_size=6,
-        dropout=0.4,
+        dropout=0.3,
         label_smoothing=0.02,
     )
 

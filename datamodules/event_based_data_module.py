@@ -35,6 +35,7 @@ class EventBasedDataModule(L.LightningDataModule):
         self.random_state = random_state
 
     def setup(self, stage=None):
+        print("====== Start Setting Up Data Module =====")
         # sort by time index to maintain temporal order
         sorted_events = self.labels.sort_index()
         n_val = int(len(sorted_events) * self.val_split)
@@ -65,6 +66,7 @@ class EventBasedDataModule(L.LightningDataModule):
 
         weights = [total / (num_classes * counts[i]) for i in range(num_classes)]
         self.class_weights = torch.tensor(weights, dtype=torch.float32)
+        print("====== End Setting Up Data Module =====")
 
     def train_dataloader(self):
         return DataLoader(
