@@ -34,6 +34,10 @@ TIME_COLS = [
     # "close",
 ]
 FEATURES_COLS = [
+    "hour_cos",
+    "dow_cos",
+    "dom_cos",
+    "month_cos",
     # Basic Data
     "close_log_return",
     "ret_mean_5",
