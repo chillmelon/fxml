@@ -9,9 +9,8 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
 
 from datamodules.event_based_data_module import EventBasedDataModule
-from models.classification.gru_model import GRUModule
+from models.classification.simple_transformer_model import SimpleTransformerModule
 from models.classification.t2v_transformer_model import T2VTransformerModule
-from models.classification.transformer_model import TransformerModule
 
 # Configurable parts
 MODEL_NAME = "t2v+transformer"
@@ -86,7 +85,8 @@ def main():
         data=df,
         labels=label_df,
         sequence_length=SEQUENCE_LENGTH,
-        features=X_COLS,
+        # features=X_COLS,
+        features=FEATURES_COLS,
         target=TARGET_COL,
         batch_size=256,
     )
@@ -110,19 +110,28 @@ def main():
     # dim_feedforward=256,
     # dropout=0.3,
     # )
-
-    model = T2VTransformerModule(
-        n_time=len(TIME_COLS),
+    model = SimpleTransformerModule(
         n_features=len(FEATURES_COLS),
         output_size=3,
-        num_layers=3,
-        d_model=128,
+        num_layers=2,
+        d_model=64,
         nhead=4,
         dim_feedforward=256,
-        kernel_size=6,
         dropout=0.3,
-        label_smoothing=0.02,
     )
+
+    # model = T2VTransformerModule(
+    #     n_time=len(TIME_COLS),
+    #     n_features=len(FEATURES_COLS),
+    #     output_size=3,
+    #     num_layers=3,
+    #     d_model=128,
+    #     nhead=4,
+    #     dim_feedforward=256,
+    #     kernel_size=6,
+    #     dropout=0.3,
+    #     label_smoothing=0.02,
+    # )
 
     logger = TensorBoardLogger(
         "lightning_logs", name=f"{MODEL_NAME}-{EVENT}-{EVENT_NAME}"

@@ -115,7 +115,7 @@ class TransformerModule(pl.LightningModule):
         loss, out = self(x, y)
 
         preds = torch.argmax(out, dim=1)
-        acc = self.train_acc(preds, y)
+        acc = self.val_acc(preds, y)
 
         self.log("val_loss", loss, prog_bar=True, logger=True)
         self.log("val_acc", acc, prog_bar=True, logger=True)

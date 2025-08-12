@@ -43,6 +43,7 @@ class EventBasedDataModule(L.LightningDataModule):
         val_events = sorted_events.iloc[-n_val:]
         train_events = sorted_events.iloc[:-n_val]
 
+        print("====== Start Building Training Dataset =====")
         self.train_dataset = DirectionDataset(
             data=self.data,
             events=train_events,
@@ -51,6 +52,7 @@ class EventBasedDataModule(L.LightningDataModule):
             target_col=self.target,
         )
 
+        print("====== Start Building Validation Dataset =====")
         self.val_dataset = DirectionDataset(
             data=self.data,
             events=val_events,
@@ -59,6 +61,7 @@ class EventBasedDataModule(L.LightningDataModule):
             target_col=self.target,
         )
 
+        print("====== Start Calculating Class Weights =====")
         labels = self.train_dataset.y
         counts = Counter(labels)
         total = sum(counts.values())

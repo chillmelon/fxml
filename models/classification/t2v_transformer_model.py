@@ -2,7 +2,6 @@ import lightning as pl
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torch._prims_common import Dim
 from torchmetrics.classification import (
     MulticlassAccuracy,
     MulticlassPrecision,
