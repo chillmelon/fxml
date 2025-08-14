@@ -8,11 +8,11 @@ data:
 resampling:
   type: dollar # 'time' or 'dollar'
   minutes: 5 # For time-based resampling
-  threshold: 843194000000 # For dollar bar resampling
-  symbol: "EURUSD"
+  threshold: 115009542m # For dollar bar resampling
+  symbol: "USDJPY"
   date_range:
-    start_date: "20210101"  # Format: YYYYMMDD
-    end_date: "20241231"    # Format: YYYYMMDD
+    start_date: "20210101" # Format: YYYYMMDD
+    end_date: "20241231" # Format: YYYYMMDD
   output:
     dir: data/resampled
     prefix: bars

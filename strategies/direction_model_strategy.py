@@ -12,11 +12,12 @@ class DirectionModelStrategy(Strategy):
 
         self.buy_count = 0
         self.sell_count = 0
+        self.confidence_threshold = 0.45
 
     def next(self):
         close = self.data.Close[-1]
         trgt = self.data.trgt[-1]
-        if self.data.prediction == 2:
+        if self.data.prediction == 2 and self.data.prob_2 >= self.confidence_threshold:
             open_trades = sum(1 for trade in self.trades if trade.is_long)
             if open_trades > 0:
                 return
@@ -25,7 +26,9 @@ class DirectionModelStrategy(Strategy):
             self.buy(size=self.lot_size, sl=sl_price, tp=tp_price)
             self.buy_count += 1
 
-        elif self.data.prediction == 0:
+        elif (
+            self.data.prediction == 0 and self.data.prob_0 >= self.confidence_threshold
+        ):
             open_trades = sum(1 for trade in self.trades if trade.is_short)
             if open_trades > 0:
                 return

@@ -48,9 +48,7 @@ TARGET_COL = "bin_class"
 def main(config_path="config/config.yaml"):
     # Load config and build paths
     config = load_config(config_path)
-    paths, resampled_name, sample_event, label_event = build_file_paths_from_config(
-        config
-    )
+    paths, sample_event, label_event = build_file_paths_from_config(config)
 
     print(f"Loading data from:")
     print(f"  Normalized: {paths['normalized']}")

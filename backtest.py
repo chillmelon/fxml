@@ -3,16 +3,17 @@ import datetime
 import pandas as pd
 from backtesting import Backtest
 
+from strategies.direction_model_strategy import DirectionModelStrategy
 from strategies.label_test_strategy import LabelTestStrategy
 
 
 def main():
     history = pd.read_pickle(
-        "./data/normalized/dukascopy-usdjpy-58m-dollar-2020-01-01-2024-12-31_normalized.pkl"
+        "./data/normalized/EURUSD-843194m-dollar-20210101-20241231-normalized.pkl"
     )
 
     labels = pd.read_pickle(
-        "./data/direction_labels/dukascopy-usdjpy-58m-dollar-2020-01-01-2024-12-31-cusum_filter.pkl"
+        "./data/predictions/EURUSD-843194m-dollar-20210101-20241231-cusum_filter.pkl"
     )
 
     history = history.join(labels, how="left")
@@ -26,6 +27,7 @@ def main():
             "close": "Close",
             "tick_volume": "Volume",
             "bin": "side",
+            "prediction": "prediction",
         },
         inplace=True,
     )
@@ -33,7 +35,7 @@ def main():
     # Run backtest
     test = Backtest(
         history,
-        LabelTestStrategy,
+        DirectionModelStrategy,
         cash=10000,
         margin=0.01,
         hedging=True,

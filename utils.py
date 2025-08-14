@@ -26,11 +26,11 @@ def parse_threshold(threshold_str):
         return float(threshold_str)
 
     if isinstance(threshold_str, str):
-        threshold_str = threshold_str.upper().strip()
+        threshold_str = threshold_str.lower().strip()
 
-        if threshold_str.endswith("M"):
+        if threshold_str.endswith("m"):
             return float(threshold_str[:-1]) * 1_000_000
-        elif threshold_str.endswith("K"):
+        elif threshold_str.endswith("k"):
             return float(threshold_str[:-1]) * 1_000
         else:
             return float(threshold_str)
@@ -109,6 +109,7 @@ def build_file_paths_from_config(config, base_dir="./data"):
     # Build event name based on resampling type
     if resampling.get("type") == "dollar":
         threshold = resampling.get("threshold", 58000000)
+        threshold = parse_threshold(threshold)
         if threshold >= 1000000:
             threshold_str = f"{int(threshold/1000000)}m"
         else:
@@ -136,4 +137,4 @@ def build_file_paths_from_config(config, base_dir="./data"):
         "meta_labels": base_path / "meta_labels" / f"{label_name}-meta.pkl",
     }
 
-    return paths, resampled_name, sample_event, label_event
+    return paths, sample_event, label_event
