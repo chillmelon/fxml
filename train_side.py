@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pandas as pd
 import torch
 from lightning.pytorch import Trainer
@@ -11,34 +9,24 @@ from lightning.pytorch.profilers import SimpleProfiler
 from datamodules.event_based_data_module import EventBasedDataModule
 from models.classification.simple_transformer_model import SimpleTransformerModule
 from models.classification.t2v_transformer_model import T2VTransformerModule
+from utils import build_file_paths_from_config, get_device, load_config
 
-# Configurable parts
-MODEL_NAME = "t2v+transformer"
-SOURCE = "dukascopy"
-SYMBOL = "usdjpy"
-EVENT = "58m-dollar"
-MINUTES = 1
-START_DATE = "2020-01-01"
-END_DATE = "2024-12-31"
-EVENT_NAME = "cusum_filter"
+# Default configurable parts (can be overridden by config)
+MODEL_NAME = "simple_transformer"
 SEQUENCE_LENGTH = 120
+# Feature configuration
 TIME_COLS = [
-    # "timestamp",
     "hour",
     "dow",
     "dom",
     "month",
-    # "open",
-    # "high",
-    # "low",
-    # "close",
 ]
+
 FEATURES_COLS = [
     "hour_cos",
     "dow_cos",
     "dom_cos",
     "month_cos",
-    # Basic Data
     "close_log_return",
     "ret_mean_5",
     "ret_mean_10",
@@ -53,32 +41,24 @@ FEATURES_COLS = [
     "bb_position",
     "donchian_width",
 ]
+
 TARGET_COL = "bin_class"
 
 
-# Build base name
-BASE_NAME = f"{SOURCE}-{SYMBOL}-tick-{START_DATE}-{END_DATE}"
-RESAMPLED_NAME = f"{SOURCE}-{SYMBOL}-{MINUTES}m-{START_DATE}-{END_DATE}"
-RESAMPLED_NAME = f"{SOURCE}-{SYMBOL}-{EVENT}-{START_DATE}-{END_DATE}"
-LABEL_NAME = f"{RESAMPLED_NAME}-{EVENT_NAME}"
-# Base directories
-BASE_DIR = Path("./data")
-RESAMPLED_DIR = BASE_DIR / "resampled"
-LABEL_DIR = BASE_DIR / "labels"
-PROCESSED_DIR = BASE_DIR / "processed"
-NORMALIZED_DIR = BASE_DIR / "normalized"
-DIRECTION_LABEL_DIR = BASE_DIR / "direction_labels"
+def main(config_path="config/config.yaml"):
+    # Load config and build paths
+    config = load_config(config_path)
+    paths, resampled_name, sample_event, label_event = build_file_paths_from_config(
+        config
+    )
 
-# Final paths
-RESAMPLED_FILE_PATH = RESAMPLED_DIR / f"{RESAMPLED_NAME}.pkl"
-PROCESSED_FILE_PATH = PROCESSED_DIR / f"{RESAMPLED_NAME}_processed.pkl"
-NORMALIZED_FILE_PATH = NORMALIZED_DIR / f"{RESAMPLED_NAME}_normalized.pkl"
-DIRECTION_LABEL_FILE_PATH = DIRECTION_LABEL_DIR / f"{RESAMPLED_NAME}-{EVENT_NAME}.pkl"
+    print(f"Loading data from:")
+    print(f"  Normalized: {paths['normalized']}")
+    print(f"  Labels: {paths['direction_labels']}")
 
-
-def main():
-    df = pd.read_pickle(NORMALIZED_FILE_PATH)
-    label_df = pd.read_pickle(DIRECTION_LABEL_FILE_PATH)
+    # Load data
+    df = pd.read_pickle(paths["normalized"])
+    label_df = pd.read_pickle(paths["direction_labels"])
 
     print(df.loc[label_df.index].head())
 
@@ -94,26 +74,7 @@ def main():
         target=TARGET_COL,
         batch_size=256,
     )
-    # dm.setup()
 
-    # Initialize GRU module
-    # model = GRUModule(
-    # n_features=len(FEATURES_COLS),
-    # output_size=3,
-    # n_hidden=64,
-    # n_layers=2,
-    # dropout=0.6,
-    # )
-
-    # model = TransformerModule(
-    # n_features=len(FEATURES_COLS),
-    # output_size=3,
-    # num_layers=2,
-    # d_model=64,
-    # nhead=4,
-    # dim_feedforward=256,
-    # dropout=0.3,
-    # )
     model = SimpleTransformerModule(
         n_features=len(FEATURES_COLS),
         output_size=3,
@@ -124,21 +85,8 @@ def main():
         dropout=0.3,
     )
 
-    # model = T2VTransformerModule(
-    #     n_time=len(TIME_COLS),
-    #     n_features=len(FEATURES_COLS),
-    #     output_size=3,
-    #     num_layers=3,
-    #     d_model=128,
-    #     nhead=4,
-    #     dim_feedforward=256,
-    #     kernel_size=6,
-    #     dropout=0.3,
-    #     label_smoothing=0.02,
-    # )
-
     logger = TensorBoardLogger(
-        "lightning_logs", name=f"{MODEL_NAME}-{EVENT}-{EVENT_NAME}"
+        "lightning_logs", name=f"{MODEL_NAME}-{sample_event}-{label_event}"
     )
 
     profiler = SimpleProfiler(filename="profiler")
@@ -156,11 +104,7 @@ def main():
         mode="min",
     )
 
-    device = "cpu"
-    if torch.cuda.is_available():
-        device = "cuda"
-    elif torch.backends.mps.is_available():
-        device = "mps"
+    device = get_device()
 
     # Training
     trainer = Trainer(

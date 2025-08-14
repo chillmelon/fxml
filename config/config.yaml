@@ -2,30 +2,115 @@
 
 # Data configuration (preparation phase)
 data:
-  raw: data/compressed/usdjpy-bar-processed-2020-01-01-2024-12-31.csv
-  dir: data/processed
-  raw_dir: data
-  raw_file: usdjpy-bar-processed-2020-01-01-2024-12-31.csv
-  train_file: train.csv
-  val_file: val.csv
-  test_file: test.csv
-  scaler_file: scaler.pkl
-  sequence_length: 30 # Number of time steps to use as input
-  target_horizon: 1 # Number of time steps to predict ahead
-  date_column: timestamp
-  add_delta: true
-  add_technical_indicators: true
-  add_time_features: false
+  raw: data/raw/dukascopy-eurusd-tick-2020-01-01-2024-12-31.csv
+
+# Resampling configuration
+resampling:
+  type: dollar # 'time' or 'dollar'
+  minutes: 5 # For time-based resampling
+  threshold: 843194000000 # For dollar bar resampling
+  symbol: "EURUSD"
+  date_range:
+    start_date: "20210101"  # Format: YYYYMMDD
+    end_date: "20241231"    # Format: YYYYMMDD
+  output:
+    dir: data/resampled
+    prefix: bars
+
+# Labeling configuration
+labeling:
+  # CUSUM event detection
+  volatility_method: intraday # 'intraday' or 'atr'
+  volatility_window: 60
+  volatility_span: 60
+  vol_multiplier: 1.0 # CUSUM threshold = vol_multiplier * median_volatility
+
+  # Triple barrier parameters
+  pt_sl: [1.0, 1.0] # [profit_taking_multiplier, stop_loss_multiplier]
+  min_ret: 0.0 # Minimum return threshold to filter events
+  time_barrier_hours: 2.0 # Maximum holding period in hours
+
+  # Filtering options
+  intraday_only: true # Only keep events that start and end on same day
+
+  # Processing options
+  num_threads: 8
+
+  # Output settings
+  output:
+    dir: data/labels
+
+# Preprocessing configuration
+preprocessing:
+  # Feature engineering settings
   features:
-    - close
-    #- ema7
-    #- ema14
-  target: close_pct_delta
-  split_ratio:
-    - 0.8
-    - 0.1
-    - 0.1 # Train/Val/Test split if using a single file
-  normalization: standard # 'standard', 'minmax', or 'robust'
+    add_returns: true
+    add_technical_indicators: true
+    add_time_features: true
+
+    # Technical indicator settings
+    technical_indicators:
+      ema_windows: [5, 20]
+      atr_windows: [14, 20]
+      bollinger_bands:
+        window: 20
+        window_dev: 2
+      donchian_channel:
+        window: 20
+      stochastic:
+        window: 14
+        smooth_window: 3
+      rsi:
+        window: 14
+      macd:
+        window_slow: 26
+        window_fast: 12
+        window_sign: 9
+
+    # Return feature settings
+    return_features:
+      rolling_mean_windows: [5, 10]
+      log_volume: true
+
+  # Normalization settings
+  normalization:
+    standard_scaler_features:
+      - close_log_return
+      - log_volume
+      - spread
+      - ret_mean_5
+      - ret_mean_10
+      - ema5
+      - ema5_slope
+      - ema20
+      - ema20_slope
+      - atr14
+      - atr20
+      - vol_adj_return
+      - close_to_atr
+      - bb_upper
+      - bb_lower
+      - bb_mavg
+      - bb_width
+      - bb_position
+      - donchian_upper
+      - donchian_lower
+      - donchian_mid
+      - donchian_width
+      - stoch_k
+      - stoch_d
+      - macd
+      - macd_signal
+      - macd_diff
+
+    minmax_scaler_features:
+      - rsi14
+
+  # Output settings
+  output:
+    save_processed: true
+    save_normalized: true
+    save_scalers: true
 
 # Model configuration
 model:
