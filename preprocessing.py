@@ -37,80 +37,30 @@ from ta.momentum import RSIIndicator, StochasticOscillator
 from ta.trend import MACD, EMAIndicator, SMAIndicator
 from ta.volatility import AverageTrueRange, BollingerBands, DonchianChannel
 
+from utils import build_file_paths_from_config
+from utils import load_config as utils_load_config
+
 
 def load_config(config_path):
-    """Load configuration from YAML file"""
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
-    return config
+    """Load configuration from YAML file - wrapper for utils function"""
+    return utils_load_config(config_path)
 
 
 def assemble_resampled_filename(config):
-    """Assemble resampled filename from config parameters
+    """Assemble resampled filename from config parameters - uses utils function
 
     Args:
         config: Configuration dictionary with resampling section
 
     Returns:
         str: Full path to resampled file
-
-    Raises:
-        ValueError: If required config parameters are missing
     """
-    if not config or "resampling" not in config:
-        raise ValueError("Config must contain 'resampling' section")
-
-    resampling = config["resampling"]
-
-    # Get required parameters
-    resample_type = resampling.get("type", "time")
-    symbol = resampling.get("symbol", "UNKNOWN")
-    output_dir = resampling.get("output", {}).get("dir", "data/resampled")
-
-    # Determine resampling suffix
-    if resample_type == "time":
-        minutes = resampling.get("minutes", 5)
-        output_suffix = f"{minutes}m"
-    elif resample_type == "dollar":
-        threshold = resampling.get("threshold", 58000000)
-        if threshold >= 1000000:
-            threshold_str = f"{int(threshold/1000000)}m"
-        elif threshold >= 1000:
-            threshold_str = f"{int(threshold/1000)}k"
-        else:
-            threshold_str = str(int(threshold))
-        output_suffix = f"{threshold_str}-dollar"
-    else:
-        raise ValueError(f"Unknown resampling type: {resample_type}")
-
-    # Get date range for filename
-    date_suffix = ""
-    if "date_range" in resampling:
-        date_range = resampling["date_range"]
-        start_date = date_range.get("start_date")
-        end_date = date_range.get("end_date")
-
-        if start_date or end_date:
-            start_str = (
-                pd.to_datetime(start_date).strftime("%Y%m%d") if start_date else ""
-            )
-            end_str = pd.to_datetime(end_date).strftime("%Y%m%d") if end_date else ""
-            if start_str and end_str:
-                date_suffix = f"-{start_str}-{end_str}"
-            elif start_str:
-                date_suffix = f"-from{start_str}"
-            elif end_str:
-                date_suffix = f"-to{end_str}"
-
-    # Assemble filename
-    filename = f"{symbol}-{output_suffix}{date_suffix}.pkl"
-    full_path = os.path.join(output_dir, filename)
-
-    return full_path
+    paths, _, _ = build_file_paths_from_config(config)
+    return str(paths["resampled"])
 
 
 def assemble_output_filename(config, stage="processed"):
-    """Assemble output filename from config parameters
+    """Assemble output filename from config parameters - uses utils function
 
     Args:
         config: Configuration dictionary with resampling section
@@ -118,57 +68,14 @@ def assemble_output_filename(config, stage="processed"):
 
     Returns:
         str: Filename without directory path
-
-    Raises:
-        ValueError: If required config parameters are missing
     """
-    if not config or "resampling" not in config:
-        raise ValueError("Config must contain 'resampling' section")
-
-    resampling = config["resampling"]
-
-    # Get required parameters
-    resample_type = resampling.get("type", "time")
-    symbol = resampling.get("symbol", "UNKNOWN")
-
-    # Determine resampling suffix
-    if resample_type == "time":
-        minutes = resampling.get("minutes", 5)
-        output_suffix = f"{minutes}m"
-    elif resample_type == "dollar":
-        threshold = resampling.get("threshold", 58000000)
-        threshold_str = (
-            f"{int(threshold/1000000)}m"
-            if threshold >= 1000000
-            else str(int(threshold))
-        )
-        output_suffix = f"{threshold_str}-dollar"
+    paths, _, _ = build_file_paths_from_config(config)
+    if stage in paths:
+        return os.path.basename(str(paths[stage]))
     else:
-        raise ValueError(f"Unknown resampling type: {resample_type}")
-
-    # Get date range for filename
-    date_suffix = ""
-    if "date_range" in resampling:
-        date_range = resampling["date_range"]
-        start_date = date_range.get("start_date")
-        end_date = date_range.get("end_date")
-
-        if start_date or end_date:
-            start_str = (
-                pd.to_datetime(start_date).strftime("%Y%m%d") if start_date else ""
-            )
-            end_str = pd.to_datetime(end_date).strftime("%Y%m%d") if end_date else ""
-            if start_str and end_str:
-                date_suffix = f"-{start_str}-{end_str}"
-            elif start_str:
-                date_suffix = f"-from{start_str}"
-            elif end_str:
-                date_suffix = f"-to{end_str}"
-
-    # Assemble filename
-    filename = f"{symbol}-{output_suffix}{date_suffix}-{stage}.pkl"
-
-    return filename
+        # Fallback for custom stages like 'features'
+        processed_filename = os.path.basename(str(paths["processed"]))
+        return processed_filename.replace("-processed.pkl", f"-{stage}.pkl")
 
 
 def load_data(file_path):
