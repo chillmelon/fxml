@@ -101,7 +101,7 @@ def build_file_paths_from_config(config, base_dir="./data"):
     """Build standardized file paths from config parameters"""
     # Extract resampling config
     resampling = config.get("resampling", {})
-    symbol = resampling.get("symbol", "UNKNOWN").lower()
+    symbol = resampling.get("symbol", "UNKNOWN")
     date_range = resampling.get("date_range", {})
     start_date = normalize_date_format(date_range.get("start_date", "20200101"))
     end_date = normalize_date_format(date_range.get("end_date", "20241231"))
