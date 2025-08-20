@@ -121,7 +121,9 @@ def build_file_paths_from_config(config, base_dir="./data"):
 
     # Build base names
     resampled_name = f"{symbol}-{sample_event}-{start_date}-{end_date}"
-    label_event = "cusum_filter"  # Could be made configurable
+    label_event = config.get("events", {}).get(
+        "type", "cusum"
+    )  # Could be made configurable
     label_name = f"{resampled_name}-{label_event}"
 
     # Base directories
