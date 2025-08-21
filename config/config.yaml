@@ -55,8 +55,9 @@ preprocessing:
 
     # Technical indicator settings
     technical_indicators:
-      ema_windows: [5, 20]
-      atr_windows: [14, 20]
+      ema_windows: [5, 20, 100]
+      atr_windows: [14, 20, 50]
+      adx_windows: [14]
       bollinger_bands:
         window: 20
         window_dev: 2

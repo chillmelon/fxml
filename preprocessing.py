@@ -34,7 +34,7 @@ import pandas as pd
 import yaml
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from ta.momentum import RSIIndicator, StochasticOscillator
-from ta.trend import MACD, EMAIndicator, SMAIndicator
+from ta.trend import MACD, ADXIndicator, EMAIndicator, SMAIndicator
 from ta.volatility import AverageTrueRange, BollingerBands, DonchianChannel
 
 from utils import build_file_paths_from_config
@@ -170,6 +170,21 @@ def add_technical_indicators(df, config=None):
         df["vol_adj_return"] = df["close_log_return"] / df[atr_col]
     if "close_delta" in df.columns and atr_col in df.columns:
         df["close_to_atr"] = df["close_delta"] / df[atr_col]
+
+    # ADX
+    click.echo("→ ADX")
+    atr_windows = ta_config.get("adx_windows", [14, 20])
+    for window in atr_windows:
+        adx = ADXIndicator(
+            high=df["high"],
+            low=df["low"],
+            close=df["close"],
+            window=window,
+            fillna=False,
+        )
+        df[f"adx{window}"] = adx.adx()
+        df[f"plus_di{window}"] = adx.adx_pos()
+        df[f"minus_di{window}"] = adx.adx_neg()
 
     # Bollinger Bands
     click.echo("→ Bollinger Bands")

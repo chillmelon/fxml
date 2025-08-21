@@ -55,7 +55,7 @@ def main(config_path="config/config.yaml"):
     print(f"  Labels: {paths['direction_labels']}")
 
     # Load data
-    df = pd.read_pickle(paths["normalized"])
+    df = pd.read_pickle(paths["processed"])
     label_df = pd.read_pickle(paths["direction_labels"])
 
     print(df.loc[label_df.index].head())
