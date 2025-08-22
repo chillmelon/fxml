@@ -111,6 +111,9 @@ preprocessing:
 
     minmax_scaler_features:
       - rsi14
+      - adx14
+      - plus_di14
+      - minus_di14
 
   # Output settings
   output:
