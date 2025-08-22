@@ -19,7 +19,7 @@ resampling:
 
 events:
   # Event sampling configuration
-  type: cusum # 'cusum' or 'volatility'
+  type: CUSUM # 'cusum' or 'volatility'
   threshold: 2.52e-04 # CUSUM threshold for event detection
 
 # Labeling configuration
