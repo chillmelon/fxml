@@ -1,5 +1,6 @@
 import lightning as pl
 import torch
+import torch.nn.functional as F
 from torch import nn
 from torchmetrics.classification import MulticlassAccuracy
 
@@ -79,10 +80,6 @@ class SimpleTransformerModule(pl.LightningModule):
         dropout=0.1,
         label_smoothing=0.0,
         pool="mean",
-        loss_type="cross_entropy",
-        focal_alpha=1.0,
-        focal_gamma=2.0,
-        class_counts=None,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -96,28 +93,30 @@ class SimpleTransformerModule(pl.LightningModule):
             dropout=dropout,
             pool=pool,
         )
-        # Initialize loss function based on loss_type
-        if loss_type == "focal":
-            self.criterion = FocalLoss(
-                alpha=focal_alpha, gamma=focal_gamma, label_smoothing=label_smoothing
-            )
-        elif loss_type == "class_balanced_focal":
-            self.criterion = ClassBalancedFocalLoss(
-                gamma=focal_gamma, class_counts=class_counts
-            )
-        else:  # default to cross_entropy
-            self.criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+        # self.criterion = nn.CrossEntropyLoss(
+        #     label_smoothing=label_smoothing,
+        #     weight=class_weights,
+        # )
         self.train_acc = MulticlassAccuracy(num_classes=output_size)
         self.val_acc = MulticlassAccuracy(num_classes=output_size)
 
     def forward(self, x):
         return self.model(x)  # logits
 
+    def compute_loss(self, logits, targets):
+        class_weights = self.trainer.datamodule.class_weights.to(self.device)
+        return F.cross_entropy(
+            logits,
+            targets,
+            weight=class_weights,
+            label_smoothing=self.hparams.label_smoothing,
+        )
+
     def _step(self, batch, stage):
         x, y, _ = batch
         y = y.squeeze().long()
         logits = self(x)
-        loss = self.criterion(logits, y)
+        loss = self.compute_loss(logits, y)
         preds = torch.argmax(logits, dim=1)
         if stage == "train":
             acc = self.train_acc(preds, y)
