@@ -71,6 +71,7 @@ def main(config_path="config/config.yaml"):
         features=FEATURES_COLS,
         target=TARGET_COL,
         batch_size=256,
+        balanced_sampling=True,
     )
 
     model = SimpleTransformerModule(

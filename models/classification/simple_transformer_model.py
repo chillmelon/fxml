@@ -4,8 +4,6 @@ import torch.nn.functional as F
 from torch import nn
 from torchmetrics.classification import MulticlassAccuracy
 
-from models.criterion import ClassBalancedFocalLoss, FocalLoss
-
 
 class SimpleTransformerModel(nn.Module):
     def __init__(
@@ -93,10 +91,9 @@ class SimpleTransformerModule(pl.LightningModule):
             dropout=dropout,
             pool=pool,
         )
-        # self.criterion = nn.CrossEntropyLoss(
-        #     label_smoothing=label_smoothing,
-        #     weight=class_weights,
-        # )
+        self.criterion = nn.CrossEntropyLoss(
+            label_smoothing=label_smoothing,
+        )
         self.train_acc = MulticlassAccuracy(num_classes=output_size)
         self.val_acc = MulticlassAccuracy(num_classes=output_size)
 
@@ -116,7 +113,7 @@ class SimpleTransformerModule(pl.LightningModule):
         x, y, _ = batch
         y = y.squeeze().long()
         logits = self(x)
-        loss = self.compute_loss(logits, y)
+        loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
         if stage == "train":
             acc = self.train_acc(preds, y)
