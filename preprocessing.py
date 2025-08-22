@@ -31,7 +31,6 @@ import click
 import joblib
 import numpy as np
 import pandas as pd
-import yaml
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from ta.momentum import RSIIndicator, StochasticOscillator
 from ta.trend import MACD, ADXIndicator, EMAIndicator, SMAIndicator
@@ -310,8 +309,11 @@ def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
             "ema5_slope",
             "ema20",
             "ema20_slope",
+            "ema100",
+            "ema100_slope",
             "atr14",
             "atr20",
+            "atr50",
             "vol_adj_return",
             "close_to_atr",
             "bb_upper",
@@ -330,7 +332,12 @@ def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
             "macd_diff",
         ]
 
-        TA_MIN_MAX = ["rsi14"]
+        TA_MIN_MAX = [
+            "rsi14",
+            "adx14",
+            "plus_di14",
+            "minus_di14",
+        ]
 
         COLS_TO_STD = FEATURES_COLS + TA_STD
         COLS_TO_MIN_MAX = TA_MIN_MAX

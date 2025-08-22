@@ -3,6 +3,8 @@ import torch
 from torch import nn
 from torchmetrics.classification import MulticlassAccuracy
 
+from models.criterion import ClassBalancedFocalLoss, FocalLoss
+
 
 class SimpleTransformerModel(nn.Module):
     def __init__(
@@ -77,6 +79,10 @@ class SimpleTransformerModule(pl.LightningModule):
         dropout=0.1,
         label_smoothing=0.0,
         pool="mean",
+        loss_type="cross_entropy",
+        focal_alpha=1.0,
+        focal_gamma=2.0,
+        class_counts=None,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -90,7 +96,17 @@ class SimpleTransformerModule(pl.LightningModule):
             dropout=dropout,
             pool=pool,
         )
-        self.criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+        # Initialize loss function based on loss_type
+        if loss_type == "focal":
+            self.criterion = FocalLoss(
+                alpha=focal_alpha, gamma=focal_gamma, label_smoothing=label_smoothing
+            )
+        elif loss_type == "class_balanced_focal":
+            self.criterion = ClassBalancedFocalLoss(
+                gamma=focal_gamma, class_counts=class_counts
+            )
+        else:  # default to cross_entropy
+            self.criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
         self.train_acc = MulticlassAccuracy(num_classes=output_size)
         self.val_acc = MulticlassAccuracy(num_classes=output_size)
 

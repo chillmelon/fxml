@@ -81,6 +81,10 @@ def main(config_path="config/config.yaml"):
         nhead=4,
         dim_feedforward=256,
         dropout=0.3,
+        loss_type="focal",
+        focal_alpha=1.0,
+        focal_gamma=2.0,
+        class_counts=label_df[TARGET_COL].value_counts().to_dict(),
     )
 
     logger = TensorBoardLogger(
