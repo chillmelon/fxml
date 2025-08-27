@@ -162,7 +162,12 @@ def add_technical_indicators(df, config=None):
             high=df["high"], low=df["low"], close=df["close"], window=window
         )
         df[f"atr{window}"] = atr.average_true_range()
-        df[f"log_atr{window}"] = np.log(df[f"atr{window}"])
+    # Cleanup 0.0 values caused by ATR calculations
+    max_atr_colum = f"atr{max(atr_windows)}"
+    df[max_atr_colum] = df[max_atr_colum].replace(0.0, np.nan)
+    df = df.dropna().copy()
+    for window in atr_windows:
+        df[f"log_atr{window}"] = np.log1p(df[f"atr{window}"])
         df[f"atr{window}_percent"] = df[f"atr{window}"] / df["close"]
         df[f"atr{window}_adjusted_return"] = df["close_delta"] / df[f"atr{window}"]
 
