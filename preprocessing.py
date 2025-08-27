@@ -153,6 +153,7 @@ def add_technical_indicators(df, config=None):
         ema = EMAIndicator(close=df["close"], window=window)
         df[f"ema{window}"] = ema.ema_indicator()
         df[f"ema{window}_slope"] = df[f"ema{window}"].diff()
+        df[f"close_above_ema{window}"] = (df["close"] > df[f"ema{window}"]).astype(int)
 
     # ATR
     click.echo("→ ATR")
@@ -210,6 +211,11 @@ def add_technical_indicators(df, config=None):
     df["donchian_lower"] = dc.donchian_channel_lband()
     df["donchian_mid"] = dc.donchian_channel_mband()
     df["donchian_width"] = df["donchian_upper"] - df["donchian_lower"]
+
+    # Close relative to Donchian Channel
+    df["close_above_donchian_mid"] = (df["close"] > df["donchian_mid"]).astype(int)
+    df["donchian_breakout_high"] = (df["close"] > df["donchian_upper"]).astype(int)
+    df["donchian_breakdown_low"] = (df["close"] < df["donchian_lower"]).astype(int)
 
     # Stochastic Oscillator
     click.echo("→ Stochastic Oscillator")
