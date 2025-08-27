@@ -279,68 +279,100 @@ def add_time_features(df, timestamp_col="timestamp"):
     return df
 
 
+def determine_scaler_columns_from_config(config):
+    """Determine which columns need standard vs minmax scaler based on config"""
+    
+    # Base features that always get standard scaler
+    base_features_std = ["close_log_return", "log_volume", "spread"]
+    
+    # Features that always get minmax scaler (bounded 0-100 or 0-1)
+    base_features_minmax = []
+    
+    cols_to_std = base_features_std.copy()
+    cols_to_minmax = base_features_minmax.copy()
+    
+    if not config or "preprocessing" not in config or "features" not in config["preprocessing"]:
+        return cols_to_std, cols_to_minmax
+        
+    features_config = config["preprocessing"]["features"]
+    
+    # Add return feature columns based on config
+    if features_config.get("add_returns", True):
+        if "return_features" in features_config:
+            return_config = features_config["return_features"]
+            rolling_windows = return_config.get("rolling_mean_windows", [5, 10])
+            for window in rolling_windows:
+                cols_to_std.append(f"ret_mean_{window}")
+    
+    # Add technical indicator columns based on config
+    if features_config.get("add_technical_indicators", True):
+        ta_config = features_config.get("technical_indicators", {})
+        
+        # EMA features (standard scaler)
+        ema_windows = ta_config.get("ema_windows", [5, 20])
+        for window in ema_windows:
+            cols_to_std.extend([f"ema{window}", f"ema{window}_slope"])
+        
+        # ATR features (standard scaler)  
+        atr_windows = ta_config.get("atr_windows", [14, 20])
+        for window in atr_windows:
+            cols_to_std.append(f"atr{window}")
+        
+        # Volume-adjusted features (standard scaler)
+        cols_to_std.extend(["vol_adj_return", "close_to_atr"])
+        
+        # ADX features (minmax scaler - bounded 0-100)
+        adx_windows = ta_config.get("adx_windows", [14])
+        for window in adx_windows:
+            cols_to_minmax.extend([f"adx{window}", f"plus_di{window}", f"minus_di{window}"])
+        
+        # RSI features (minmax scaler - bounded 0-100)
+        if "rsi" in ta_config:
+            rsi_window = ta_config["rsi"].get("window", 14)
+            cols_to_minmax.append(f"rsi{rsi_window}")
+        
+        # Bollinger Bands (standard scaler)
+        if "bollinger_bands" in ta_config:
+            cols_to_std.extend(["bb_upper", "bb_lower", "bb_mavg", "bb_width", "bb_position"])
+            
+        # Donchian Channel (standard scaler)
+        if "donchian_channel" in ta_config:
+            cols_to_std.extend(["donchian_upper", "donchian_lower", "donchian_mid", "donchian_width"])
+        
+        # Stochastic Oscillator (minmax scaler - bounded 0-100)
+        if "stochastic" in ta_config:
+            cols_to_minmax.extend(["stoch_k", "stoch_d"])
+        
+        # MACD (standard scaler)
+        if "macd" in ta_config:
+            cols_to_std.extend(["macd", "macd_signal", "macd_diff"])
+    
+    return cols_to_std, cols_to_minmax
+
+
 def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
     """Normalize features using StandardScaler and MinMaxScaler"""
     click.echo("🔧 Normalizing features...")
 
     df = df.copy()
 
-    # Get normalization settings from config or use defaults
+    # Check if explicit normalization config exists, otherwise determine from TA config
     if (
         config
         and "preprocessing" in config
         and "normalization" in config["preprocessing"]
+        and ("standard_scaler_features" in config["preprocessing"]["normalization"] 
+             or "minmax_scaler_features" in config["preprocessing"]["normalization"])
     ):
+        # Use explicit normalization config
         norm_config = config["preprocessing"]["normalization"]
         COLS_TO_STD = norm_config.get("standard_scaler_features", [])
         COLS_TO_MIN_MAX = norm_config.get("minmax_scaler_features", [])
+        click.echo("Using explicit normalization configuration from config")
     else:
-        # Define feature groups based on notebook analysis (defaults)
-        FEATURES_COLS = [
-            "close_log_return",
-            "log_volume",
-            "spread",
-            "ret_mean_5",
-            "ret_mean_10",
-        ]
-
-        TA_STD = [
-            "ema5",
-            "ema5_slope",
-            "ema20",
-            "ema20_slope",
-            "ema100",
-            "ema100_slope",
-            "atr14",
-            "atr20",
-            "atr50",
-            "vol_adj_return",
-            "close_to_atr",
-            "bb_upper",
-            "bb_lower",
-            "bb_mavg",
-            "bb_width",
-            "bb_position",
-            "donchian_upper",
-            "donchian_lower",
-            "donchian_mid",
-            "donchian_width",
-            "stoch_k",
-            "stoch_d",
-            "macd",
-            "macd_signal",
-            "macd_diff",
-        ]
-
-        TA_MIN_MAX = [
-            "rsi14",
-            "adx14",
-            "plus_di14",
-            "minus_di14",
-        ]
-
-        COLS_TO_STD = FEATURES_COLS + TA_STD
-        COLS_TO_MIN_MAX = TA_MIN_MAX
+        # Determine scalers from technical indicators config
+        COLS_TO_STD, COLS_TO_MIN_MAX = determine_scaler_columns_from_config(config)
+        click.echo("Determined scaler columns from technical indicators configuration")
 
     # Filter columns that exist in dataframe
     COLS_TO_STD = [col for col in COLS_TO_STD if col in df.columns]

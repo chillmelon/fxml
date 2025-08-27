@@ -55,7 +55,7 @@ preprocessing:
 
     # Technical indicator settings
     technical_indicators:
-      ema_windows: [5, 20, 100]
+      ema_windows: [5, 20, 50, 100]
       atr_windows: [14, 20, 50]
       adx_windows: [14]
       bollinger_bands:
@@ -75,7 +75,7 @@ preprocessing:
 
     # Return feature settings
     return_features:
-      rolling_mean_windows: [5, 10]
+      rolling_mean_windows: [5, 10, 15, 20]
       log_volume: true
 
   # Normalization settings
@@ -86,12 +86,17 @@ preprocessing:
       - spread
       - ret_mean_5
       - ret_mean_10
+      - ret_mean_15
+      - ret_mean_20
       - ema5
       - ema5_slope
       - ema20
       - ema20_slope
+      - ema100
+      - ema100_slope
       - atr14
       - atr20
+      - atr50
       - vol_adj_return
       - close_to_atr
       - bb_upper
@@ -123,25 +128,102 @@ preprocessing:
 
 # Model configuration
 model:
-  type: gru # 'lstm', 'gru', 'tcn', 'transformer'
-  hidden_size: 64
-  num_layers: 1
-  dropout: 0.2
-  bidirectional: false
-  attention: false
+  type: simple_transformer # 'simple_transformer', 't2v_transformer', 'gru', 'lstm'
+  
+  # Data configuration
+  sequence_length: 120
+  features: 
+    - hour_cos
+    - dow_cos
+    - dom_cos
+    - month_cos
+    - close_log_return
+    - ret_mean_5
+    - ret_mean_10
+    - log_volume
+    - ema5_slope
+    - ema20_slope
+    - ema100_slope
+    - atr20
+    - vol_adj_return
+    - close_to_atr
+    - macd_diff
+    - bb_width
+    - bb_position
+    - donchian_width
+  target_col: bin_class
+  
+  # Model architecture hyperparameters
+  transformer:
+    d_model: 64
+    nhead: 4
+    num_layers: 2
+    dim_feedforward: 256
+    dropout: 0.3
+    label_smoothing: 0.0
+    pool: mean # 'mean' or 'last'
+  
+  gru:
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.2
+    bidirectional: false
+  
+  lstm:
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.2
+    bidirectional: false
+  
+  t2v_transformer:
+    d_model: 64
+    nhead: 4
+    num_layers: 2
+    dim_feedforward: 256
+    dropout: 0.3
+    label_smoothing: 0.0
+    pool: mean
+    
+  output_size: 3
 
 # Training configuration
 training:
-  epochs: 200
-  batch_size: 64
-  learning_rate: 0.0001
-  weight_decay: 0.0001
-  early_stopping_patience: 10
-  optimizer: adam # 'adam', 'sgd', 'rmsprop'
-  scheduler: step # 'plateau', 'step', 'cosine', or null
-  lr_scheduler_patience: 5
-  lr_scheduler_factor: 0.5
+  epochs: 100
+  batch_size: 256
+  balanced_sampling: true
+  
+  # Optimizer hyperparameters
+  optimizer:
+    type: adamw # 'adam', 'adamw', 'sgd', 'rmsprop'
+    learning_rate: 0.0003
+    weight_decay: 0.0001
+  
+  # Learning rate scheduler
+  scheduler:
+    type: step # 'step', 'plateau', 'cosine', 'onecycle', or null
+    step_lr:
+      step_size: 10
+      gamma: 0.5
+    plateau_lr:
+      patience: 5
+      factor: 0.5
+      min_lr: 1e-7
+    cosine_lr:
+      T_max: 100
+      eta_min: 1e-7
+    onecycle_lr:
+      max_lr: 0.001
+      pct_start: 0.3
+  
+  # Regularization
   gradient_clipping: 1.0
+  
+  # Early stopping
+  early_stopping:
+    patience: 12
+    monitor: val_loss
+    mode: min
+    min_delta: 0.001
 
 # Output configuration
 output:
