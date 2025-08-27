@@ -15,10 +15,8 @@ class SimpleTransformerModel(nn.Module):
         num_layers=2,
         dim_feedforward=128,
         dropout=0.1,
-        pool="last",
-    ):  # "last" | "mean"
+    ):
         super().__init__()
-        self.pool = pool
         self.input_proj = nn.Linear(n_features, d_model)
         self.positional_encoding = PositionalEncoding(d_model, dropout)
 
@@ -37,10 +35,7 @@ class SimpleTransformerModel(nn.Module):
         x = self.input_proj(x)
         x = self.positional_encoding(x)
         x = self.encoder(x)  # (B, T, d_model)
-        if self.pool == "mean":
-            x = x.mean(dim=1)
-        else:
-            x = x[:, -1, :]
+        x = x[:, -1, :]
         logits = self.fc_out(x)  # (B, C)
         return logits
 
@@ -77,7 +72,6 @@ class SimpleTransformerModule(pl.LightningModule):
         dim_feedforward=128,
         dropout=0.1,
         label_smoothing=0.0,
-        pool="mean",
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -89,7 +83,6 @@ class SimpleTransformerModule(pl.LightningModule):
             num_layers=num_layers,
             dim_feedforward=dim_feedforward,
             dropout=dropout,
-            pool=pool,
         )
         self.criterion = nn.CrossEntropyLoss(
             label_smoothing=label_smoothing,
