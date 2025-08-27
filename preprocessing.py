@@ -162,18 +162,14 @@ def add_technical_indicators(df, config=None):
             high=df["high"], low=df["low"], close=df["close"], window=window
         )
         df[f"atr{window}"] = atr.average_true_range()
-
-    # Volume-adjusted return and close-to-atr features (using first ATR window)
-    atr_col = f"atr{atr_windows[0]}"
-    if "close_log_return" in df.columns and atr_col in df.columns:
-        df["vol_adj_return"] = df["close_log_return"] / df[atr_col]
-    if "close_delta" in df.columns and atr_col in df.columns:
-        df["close_to_atr"] = df["close_delta"] / df[atr_col]
+        df[f"log_atr{window}"] = np.log(df[f"atr{window}"])
+        df[f"atr{window}_percent"] = df[f"atr{window}"] / df["close"]
+        df[f"atr{window}_adjusted_return"] = df["close_delta"] / df[f"atr{window}"]
 
     # ADX
     click.echo("→ ADX")
-    atr_windows = ta_config.get("adx_windows", [14, 20])
-    for window in atr_windows:
+    adx_windows = ta_config.get("adx_windows", [14, 20])
+    for window in adx_windows:
         adx = ADXIndicator(
             high=df["high"],
             low=df["low"],
@@ -225,21 +221,12 @@ def add_technical_indicators(df, config=None):
 
     # RSI
     click.echo("→ RSI")
-    rsi_config = ta_config.get("rsi", {"window": 14})
-    rsi = RSIIndicator(close=df["close"], window=rsi_config["window"])
-    df[f"rsi{rsi_config['window']}"] = rsi.rsi()
 
     rsi_windows = ta_config.get("rsi_windows", [14, 20])
     for window in rsi_windows:
         rsi = RSIIndicator(close=df["close"], window=window)
         df[f"rsi{window}"] = rsi.rsi()
-
-    # Volume-adjusted return and close-to-atr features (using first ATR window)
-    atr_col = f"atr{atr_windows[0]}"
-    if "close_log_return" in df.columns and atr_col in df.columns:
-        df["vol_adj_return"] = df["close_log_return"] / df[atr_col]
-    if "close_delta" in df.columns and atr_col in df.columns:
-        df["close_to_atr"] = df["close_delta"] / df[atr_col]
+        df[f"rsi{window}_slope"] = df[f"rsi{window}"].diff()
 
     # MACD
     click.echo("→ MACD")
@@ -333,9 +320,9 @@ def determine_scaler_columns_from_config(config):
         atr_windows = ta_config.get("atr_windows", [14, 20])
         for window in atr_windows:
             cols_to_std.append(f"atr{window}")
-
-        # Volume-adjusted features (standard scaler)
-        cols_to_std.extend(["vol_adj_return", "close_to_atr"])
+            cols_to_std.append(f"log_atr{window}")
+            cols_to_std.append(f"atr{window}_percent")
+            cols_to_std.append(f"atr{window}_adjusted_return")
 
         # ADX features (minmax scaler - bounded 0-100)
         adx_windows = ta_config.get("adx_windows", [14])
@@ -348,6 +335,7 @@ def determine_scaler_columns_from_config(config):
         rsi_windows = ta_config.get("rsi_windows", [14, 20])
         for window in rsi_windows:
             cols_to_minmax.append(f"rsi{window}")
+            cols_to_std.append(f"rsi{window}_slope")
 
         # Bollinger Bands (standard scaler)
         if "bollinger_bands" in ta_config:
