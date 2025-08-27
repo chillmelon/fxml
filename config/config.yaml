@@ -17,6 +17,11 @@ resampling:
     dir: data/resampled
     prefix: bars
 
+events:
+  # Event sampling configuration
+  type: CUSUM # 'cusum' or 'volatility'
+  threshold: 2.52e-04 # CUSUM threshold for event detection
+
 # Preprocessing configuration
 preprocessing:
   # Feature engineering settings
