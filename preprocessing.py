@@ -203,19 +203,22 @@ def add_technical_indicators(df, config=None):
 
     # Donchian Channel
     click.echo("→ Donchian Channel")
-    dc_config = ta_config.get("donchian_channel", {"window": 20})
-    dc = DonchianChannel(
-        high=df["high"], low=df["low"], close=df["close"], window=dc_config["window"]
-    )
-    df["donchian_upper"] = dc.donchian_channel_hband()
-    df["donchian_lower"] = dc.donchian_channel_lband()
-    df["donchian_mid"] = dc.donchian_channel_mband()
-    df["donchian_width"] = df["donchian_upper"] - df["donchian_lower"]
-
-    # Close relative to Donchian Channel
-    df["close_above_donchian_mid"] = (df["close"] > df["donchian_mid"]).astype(int)
-    df["donchian_breakout_high"] = (df["close"] > df["donchian_upper"]).astype(int)
-    df["donchian_breakdown_low"] = (df["close"] < df["donchian_lower"]).astype(int)
+    dc_windows = ta_config.get("donchian_channel_windows", [20])
+    for window in dc_windows:
+        dc = DonchianChannel(
+            high=df["high"], low=df["low"], close=df["close"], window=window
+        )
+        df[f"dc{window}_upper"] = dc.donchian_channel_hband().shift(1)
+        df[f"dc{window}_lower"] = dc.donchian_channel_lband().shift(1)
+        df[f"dc{window}_mid"] = dc.donchian_channel_mband().shift(1)
+        df[f"dc{window}_width"] = df[f"dc{window}_upper"] - df[f"dc{window}_lower"]
+        df[f"close_above_dc{window}_mid"] = (
+            df["close"] > df[f"dc{window}_mid"]
+        ).astype(int)
+        df[f"dc{window}_breakout"] = (df["close"] > df[f"dc{window}_upper"]).astype(int)
+        df[f"dc{window}_breakdown"] = (df["close"] < df[f"dc{window}_lower"]).astype(
+            int
+        )
 
     # Stochastic Oscillator
     click.echo("→ Stochastic Oscillator")

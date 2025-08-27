@@ -38,8 +38,7 @@ preprocessing:
       bollinger_bands:
         window: 20
         window_dev: 2
-      donchian_channel:
-        window: 20
+      donchian_channel_windows: [20, 50, 100]
       stochastic:
         window: 14
         smooth_window: 3
