@@ -29,30 +29,33 @@ FEATURES_COLS = [
     "month_cos",
     "close_log_return",
     "ret_mean_5",
-    "ret_mean_10",
     "ret_mean_15",
-    "ret_mean_20",
+    "rv5",
+    "sqrt_rv5",
+    "rv15",
+    "sqrt_rv15",
+    "rv50",
+    "sqrt_rv50",
     "ema5_slope",
     "ema20_slope",
     "ema50_slope",
     "ema100_slope",
+    "close_above_ema20",
     "log_atr14",
-    "log_atr25",
-    "log_atr50",
+    "log_atr60",
     "atr14_adjusted_return",
-    "atr25_adjusted_return",
-    "atr50_adjusted_return",
     "adx14",
+    'plus_di14',
+    'minus_di14',
     "rsi14",
-    "rsi25",
-    "rsi50",
     "rsi14_slope",
-    "rsi25_slope",
-    "rsi50_slope",
     "macd_diff",
     "bb_width",
     "bb_position",
-    "donchian_width",
+    "dc20_width",
+    # 'close_above_dc20_mid',
+    # 'dc20_breakout',
+    # 'dc20_breakdown',
 ]
 
 TARGET_COL = "bin_class"
@@ -71,7 +74,7 @@ def main(config_path="config/config.yaml"):
     df = pd.read_pickle(paths["normalized"])
     label_df = pd.read_pickle(paths["direction_labels"])
 
-    print(df.loc[label_df.index].head())
+    print(df.loc[label_df.index, FEATURES_COLS].head())
 
     print(label_df[TARGET_COL].value_counts())
     X_COLS = TIME_COLS + FEATURES_COLS
@@ -84,7 +87,7 @@ def main(config_path="config/config.yaml"):
         features=FEATURES_COLS,
         target=TARGET_COL,
         batch_size=256,
-        balanced_sampling=True,
+        balanced_sampling=False,
     )
 
     model = SimpleTransformerModule(
@@ -94,7 +97,8 @@ def main(config_path="config/config.yaml"):
         d_model=64,
         nhead=4,
         dim_feedforward=256,
-        dropout=0.3,
+        dropout=0.4,
+        use_class_weights=True,
     )
 
     logger = TensorBoardLogger(
