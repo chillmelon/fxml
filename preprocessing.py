@@ -146,7 +146,14 @@ def add_technical_indicators(df, config=None):
         if "technical_indicators" in features_config:
             ta_config = features_config["technical_indicators"]
 
-    # EMAs and slopes
+    # RV
+    click.echo("→ RV")
+    rv_windows = ta_config.get("rv_windows", [5, 10, 15, 20])
+    for window in rv_windows:
+        df[f"rv{window}"] = df["close_log_return"].pow(2).rolling(window).sum()
+        df[f"sqrt_rv{window}"] = df[f"rv{window}"].pow(0.5)  # EMAs and slopes
+
+    # EMAs
     click.echo("→ EMAs and slopes")
     ema_windows = ta_config.get("ema_windows", [5, 20])
     for window in ema_windows:
