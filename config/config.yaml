@@ -32,9 +32,9 @@ preprocessing:
 
     # Technical indicator settings
     technical_indicators:
-      rv_windows: [5, 10, 15, 20]
+      rv_windows: [5, 15, 50]
       ema_windows: [5, 20, 50, 100]
-      atr_windows: [14, 25, 50]
+      atr_windows: [14, 60, 120]
       adx_windows: [14]
       bollinger_bands:
         window: 20
