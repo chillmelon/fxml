@@ -31,7 +31,7 @@ import click
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 from ta.momentum import RSIIndicator, StochasticOscillator
 from ta.trend import MACD, ADXIndicator, EMAIndicator, SMAIndicator
 from ta.volatility import AverageTrueRange, BollingerBands, DonchianChannel
@@ -151,6 +151,7 @@ def add_technical_indicators(df, config=None):
     rv_windows = ta_config.get("rv_windows", [5, 10, 15, 20])
     for window in rv_windows:
         df[f"rv{window}"] = df["close_log_return"].pow(2).rolling(window).sum()
+        df[f"log_rv{window}"] = np.log1p(df[f"rv{window}"])
         df[f"sqrt_rv{window}"] = df[f"rv{window}"].pow(0.5)  # EMAs and slopes
 
     # EMAs
@@ -173,7 +174,7 @@ def add_technical_indicators(df, config=None):
     # Cleanup 0.0 values caused by ATR calculations
     max_atr_colum = f"atr{max(atr_windows)}"
     df[max_atr_colum] = df[max_atr_colum].replace(0.0, np.nan)
-    df = df.dropna().copy()
+    df.dropna(inplace=True)
     for window in atr_windows:
         df[f"log_atr{window}"] = np.log1p(df[f"atr{window}"])
         df[f"atr{window}_percent"] = df[f"atr{window}"] / df["close"]
@@ -302,12 +303,16 @@ def add_time_features(df, timestamp_col="timestamp"):
 def determine_scaler_columns_from_config(config):
     """Determine which columns need standard vs minmax scaler based on config"""
 
+    # Features that always get robust scaler
+    base_features_robust = []
+
     # Base features that always get standard scaler
     base_features_std = ["close_log_return", "log_volume", "spread"]
 
     # Features that always get minmax scaler (bounded 0-100 or 0-1)
     base_features_minmax = []
 
+    cols_to_robust = base_features_robust.copy()
     cols_to_std = base_features_std.copy()
     cols_to_minmax = base_features_minmax.copy()
 
@@ -332,6 +337,13 @@ def determine_scaler_columns_from_config(config):
     if features_config.get("add_technical_indicators", True):
         ta_config = features_config.get("technical_indicators", {})
 
+        # RV features (standard scaler)
+        rv_windows = ta_config.get("rv_windows", [5, 10, 15, 20])
+        for window in rv_windows:
+            cols_to_std.append(f"rv{window}")
+            cols_to_robust.append(f"rv{window}")
+            cols_to_std.append(f"sqrt_rv{window}")
+
         # EMA features (standard scaler)
         ema_windows = ta_config.get("ema_windows", [5, 20])
         for window in ema_windows:
@@ -341,7 +353,7 @@ def determine_scaler_columns_from_config(config):
         atr_windows = ta_config.get("atr_windows", [14, 20])
         for window in atr_windows:
             cols_to_std.append(f"atr{window}")
-            cols_to_std.append(f"log_atr{window}")
+            cols_to_robust.append(f"log_atr{window}")
             cols_to_std.append(f"atr{window}_percent")
             cols_to_std.append(f"atr{window}_adjusted_return")
 
@@ -378,7 +390,7 @@ def determine_scaler_columns_from_config(config):
         if "macd" in ta_config:
             cols_to_std.extend(["macd", "macd_signal", "macd_diff"])
 
-    return cols_to_std, cols_to_minmax
+    return cols_to_robust, cols_to_std, cols_to_minmax
 
 
 def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
@@ -387,18 +399,25 @@ def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
 
     df = df.copy()
 
-    COLS_TO_STD, COLS_TO_MIN_MAX = determine_scaler_columns_from_config(config)
+    COLS_TO_ROBUST, COLS_TO_STD, COLS_TO_MIN_MAX = determine_scaler_columns_from_config(
+        config
+    )
     click.echo("Determined scaler columns from technical indicators configuration")
 
     # Filter columns that exist in dataframe
+    COLS_TO_ROBUST = [col for col in COLS_TO_ROBUST if col in df.columns]
     COLS_TO_STD = [col for col in COLS_TO_STD if col in df.columns]
     COLS_TO_MIN_MAX = [col for col in COLS_TO_MIN_MAX if col in df.columns]
 
     # Initialize scalers
     standard_scaler = StandardScaler()
     minmax_scaler = MinMaxScaler()
+    robust_scaler = RobustScaler()
 
     # Apply scaling
+    if COLS_TO_ROBUST:
+        df[COLS_TO_ROBUST] = robust_scaler.fit_transform(df[COLS_TO_ROBUST])
+        click.echo(f"RobustScaler applied to {len(COLS_TO_ROBUST)} features")
     if COLS_TO_STD:
         df[COLS_TO_STD] = standard_scaler.fit_transform(df[COLS_TO_STD])
         click.echo(f"StandardScaler applied to {len(COLS_TO_STD)} features")
@@ -410,6 +429,9 @@ def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
     # Save scalers if directory provided
     if scaler_dir:
         os.makedirs(scaler_dir, exist_ok=True)
+        if COLS_TO_ROBUST:
+            scaler_path = os.path.join(scaler_dir, f"{file_prefix}_robust_scaler.pkl")
+            joblib.dump(robust_scaler, scaler_path)
         if COLS_TO_STD:
             scaler_path = os.path.join(scaler_dir, f"{file_prefix}_standard_scaler.pkl")
             joblib.dump(standard_scaler, scaler_path)
@@ -418,7 +440,7 @@ def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
             joblib.dump(minmax_scaler, scaler_path)
         click.echo(f"Scalers saved to {scaler_dir}")
 
-    return df, standard_scaler, minmax_scaler
+    return df, robust_scaler, standard_scaler, minmax_scaler
 
 
 def full_preprocessing_pipeline(input_path, output_dir, file_prefix=None, config=None):
@@ -508,7 +530,7 @@ def full_preprocessing_pipeline(input_path, output_dir, file_prefix=None, config
     click.echo(f"Processed data saved to {processed_path}")
 
     # Normalize features
-    df_normalized, std_scaler, mm_scaler = normalize_features(
+    df_normalized, rob_scaler, std_scaler, mm_scaler = normalize_features(
         df, scalers_dir, scaler_prefix, config
     )
 
