@@ -411,7 +411,7 @@ def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
 
     # Initialize scalers
     standard_scaler = StandardScaler()
-    minmax_scaler = MinMaxScaler()
+    minmax_scaler = MinMaxScaler(feature_range=(-1, 1))
     robust_scaler = RobustScaler()
 
     # Apply scaling
