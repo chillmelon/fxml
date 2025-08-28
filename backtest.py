@@ -33,16 +33,16 @@ def main():
     )
 
     # Run backtest
-    test = Backtest(
+    backtest = Backtest(
         history,
         # LabelTestStrategy,
-        DirectionConfidenceStrategy,
+        DirectionModelStrategy,
         cash=10000,
         margin=0.01,
         hedging=True,
         exclusive_orders=False,
     )
-    result = test.run()
+    result = backtest.run()
 
     print(result)
     print(f"Buy count = {result._strategy.buy_count}")
