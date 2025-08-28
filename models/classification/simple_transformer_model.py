@@ -72,6 +72,7 @@ class SimpleTransformerModule(pl.LightningModule):
         dim_feedforward=128,
         dropout=0.1,
         label_smoothing=0.0,
+        use_class_weights=False,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -94,19 +95,26 @@ class SimpleTransformerModule(pl.LightningModule):
         return self.model(x)  # logits
 
     def compute_loss(self, logits, targets):
-        class_weights = self.trainer.datamodule.class_weights.to(self.device)
-        return F.cross_entropy(
-            logits,
-            targets,
-            weight=class_weights,
-            label_smoothing=self.hparams.label_smoothing,
-        )
+        if self.hparams.use_class_weights:
+            class_weights = self.trainer.datamodule.class_weights.to(self.device)
+            return F.cross_entropy(
+                logits,
+                targets,
+                weight=class_weights,
+                label_smoothing=self.hparams.label_smoothing,
+            )
+        else:
+            return F.cross_entropy(
+                logits,
+                targets,
+                label_smoothing=self.hparams.label_smoothing,
+            )
 
     def _step(self, batch, stage):
         x, y, _ = batch
         y = y.squeeze().long()
         logits = self(x)
-        loss = self.criterion(logits, y)
+        loss = self.compute_loss(logits, y)
         preds = torch.argmax(logits, dim=1)
         if stage == "train":
             acc = self.train_acc(preds, y)
