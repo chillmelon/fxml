@@ -58,17 +58,26 @@ def handle_timestamp_column(df, timestamp_col="timestamp"):
 
 def load_data(file_path):
     """Load data from pickle or CSV file"""
+    print(f"Loading data from: {file_path}")
+
     if str(file_path).endswith(".pkl"):
-        return pd.read_pickle(file_path)
+        df = pd.read_pickle(file_path)
+        print(f"✓ Loaded pickle data: {df.shape[0]:,} rows, {df.shape[1]} columns")
+        return df
     elif str(file_path).endswith(".csv"):
-        return pd.read_csv(file_path)
+        df = pd.read_csv(file_path)
+        print(f"✓ Loaded CSV data: {df.shape[0]:,} rows, {df.shape[1]} columns")
+        return df
     else:
         raise ValueError("Unsupported file format. Please use .pkl or .csv")
 
 
 def add_return_features(df, price_col="close", config=None):
     """Add return features (delta, return, log return)"""
+    print("Adding return features...")
     df = df.copy()
+
+    # Basic return features
     df[f"{price_col}_delta"] = df[price_col] - df[price_col].shift(1)
     df[f"{price_col}_return"] = df[price_col] / df[price_col].shift(1) - 1
     df[f"{price_col}_log_return"] = np.log(df[price_col] / df[price_col].shift(1))
@@ -84,10 +93,13 @@ def add_return_features(df, price_col="close", config=None):
             .rolling(window=window, min_periods=window)
             .mean()
         )
+    if rolling_windows:
+        print(f"  ✓ Added rolling return means for windows: {rolling_windows}")
 
     # Add log volume
     if return_config.get("log_volume", True) and "volume" in df.columns:
         df["log_volume"] = np.log1p(df["volume"])
+        print(f"  ✓ Added log volume")
 
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     return df
@@ -95,6 +107,7 @@ def add_return_features(df, price_col="close", config=None):
 
 def add_technical_indicators(df, config=None):
     """Add technical indicators"""
+    print("Adding technical indicators...")
     df = df.copy()
     features_config = get_feature_config(config)
     ta_config = features_config.get("technical_indicators", {})
@@ -105,6 +118,7 @@ def add_technical_indicators(df, config=None):
         df[f"rv{window}"] = df["close_log_return"].pow(2).rolling(window).sum()
         df[f"log_rv{window}"] = np.log1p(df[f"rv{window}"])
         df[f"sqrt_rv{window}"] = df[f"rv{window}"].pow(0.5)
+    print(f"  ✓ RV features for windows: {rv_windows}")
 
     # EMAs
     ema_windows = ta_config.get("ema_windows", [5, 20])
@@ -113,6 +127,7 @@ def add_technical_indicators(df, config=None):
         df[f"ema{window}"] = ema.ema_indicator()
         df[f"ema{window}_slope"] = df[f"ema{window}"].diff()
         df[f"close_above_ema{window}"] = (df["close"] > df[f"ema{window}"]).astype(int)
+    print(f"  ✓ EMA features for windows: {ema_windows}")
 
     # ATR
     atr_windows = ta_config.get("atr_windows", [14, 20])
@@ -124,11 +139,17 @@ def add_technical_indicators(df, config=None):
     # Cleanup 0.0 values from ATR calculations
     max_atr_column = f"atr{max(atr_windows)}"
     df[max_atr_column] = df[max_atr_column].replace(0.0, np.nan)
+    rows_before = df.shape[0]
     df.dropna(inplace=True)
+    rows_after = df.shape[0]
+    if rows_before != rows_after:
+        print(f"  → Dropped {rows_before - rows_after} rows with ATR NaN values")
+
     for window in atr_windows:
         df[f"log_atr{window}"] = np.log1p(df[f"atr{window}"])
         df[f"atr{window}_percent"] = df[f"atr{window}"] / df["close"]
         df[f"atr{window}_adjusted_return"] = df["close_delta"] / df[f"atr{window}"]
+    print(f"  ✓ ATR features for windows: {atr_windows}")
 
     # ADX
     adx_windows = ta_config.get("adx_windows", [14, 20])
@@ -143,6 +164,7 @@ def add_technical_indicators(df, config=None):
         df[f"adx{window}"] = adx.adx()
         df[f"plus_di{window}"] = adx.adx_pos()
         df[f"minus_di{window}"] = adx.adx_neg()
+    print(f"  ✓ ADX features for windows: {adx_windows}")
 
     # Bollinger Bands
     bb_config = ta_config.get("bollinger_bands", {"window": 20, "window_dev": 2})
@@ -156,6 +178,9 @@ def add_technical_indicators(df, config=None):
     df["bb_mavg"] = bb.bollinger_mavg()
     df["bb_width"] = df["bb_upper"] - df["bb_lower"]
     df["bb_position"] = (df["close"] - df["bb_lower"]) / df["bb_width"]
+    print(
+        f"  ✓ Bollinger Bands (window={bb_config['window']}, dev={bb_config['window_dev']})"
+    )
 
     # Donchian Channel
     dc_windows = ta_config.get("donchian_channel_windows", [20])
@@ -174,6 +199,7 @@ def add_technical_indicators(df, config=None):
         df[f"dc{window}_breakdown"] = (df["close"] < df[f"dc{window}_lower"]).astype(
             int
         )
+    print(f"  ✓ Donchian Channel features for windows: {dc_windows}")
 
     # Stochastic Oscillator
     stoch_config = ta_config.get("stochastic", {"window": 14, "smooth_window": 3})
@@ -186,6 +212,9 @@ def add_technical_indicators(df, config=None):
     )
     df["stoch_k"] = stoch.stoch()
     df["stoch_d"] = stoch.stoch_signal()
+    print(
+        f"  ✓ Stochastic Oscillator (window={stoch_config['window']}, smooth={stoch_config['smooth_window']})"
+    )
 
     # RSI
     rsi_windows = ta_config.get("rsi_windows", [14, 20])
@@ -193,6 +222,7 @@ def add_technical_indicators(df, config=None):
         rsi = RSIIndicator(close=df["close"], window=window)
         df[f"rsi{window}"] = rsi.rsi()
         df[f"rsi{window}_slope"] = df[f"rsi{window}"].diff()
+    print(f"  ✓ RSI features for windows: {rsi_windows}")
 
     # MACD
     macd_config = ta_config.get(
@@ -207,26 +237,32 @@ def add_technical_indicators(df, config=None):
     df["macd"] = macd.macd()
     df["macd_signal"] = macd.macd_signal()
     df["macd_diff"] = macd.macd_diff()
-
+    print(
+        f"  ✓ MACD (slow={macd_config['window_slow']}, fast={macd_config['window_fast']}, signal={macd_config['window_sign']})"
+    )
     return df
 
 
 def add_time_features(df, timestamp_col="timestamp"):
     """Add cyclical time features"""
+    print("Adding time features...")
     df = df.copy()
 
     # Ensure timestamp is datetime
     if df[timestamp_col].dtype != "datetime64[ns]":
         df[timestamp_col] = pd.to_datetime(df[timestamp_col])
+        print(f"  ✓ Converted {timestamp_col} to datetime")
 
     # Unix time
     df["unix_time"] = df[timestamp_col].astype("int64") / 1e9
+    print(f"  ✓ Added unix_time")
 
     # Extract components
     df["hour"] = df[timestamp_col].dt.hour
     df["dow"] = df[timestamp_col].dt.dayofweek
     df["dom"] = df[timestamp_col].dt.day
     df["month"] = df[timestamp_col].dt.month
+    print(f"  ✓ Extracted time components (hour, dow, dom, month)")
 
     # Cyclical encoding
     df["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24)
@@ -237,6 +273,7 @@ def add_time_features(df, timestamp_col="timestamp"):
     df["dom_cos"] = np.cos(2 * np.pi * df["dom"] / 31)
     df["month_sin"] = np.sin(2 * np.pi * df["month"] / 12)
     df["month_cos"] = np.cos(2 * np.pi * df["month"] / 12)
+    print(f"  ✓ Added cyclical encodings (sin/cos pairs)")
 
     return df
 
@@ -284,6 +321,7 @@ def get_scaler_columns(config):
 
 def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
     """Normalize features using appropriate scalers"""
+    print("Normalizing features...")
     df = df.copy()
 
     # Get numeric columns for scaling (exclude timestamp, categorical)
@@ -291,7 +329,7 @@ def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
     if "unix_time" in numeric_cols:
         numeric_cols.remove("unix_time")
 
-    scaler_mapping, categorize_column = get_scaler_columns(config)
+    _, categorize_column = get_scaler_columns(config)
 
     # Group columns by scaler type
     cols_by_scaler = {"robust": [], "standard": [], "minmax": []}
@@ -299,6 +337,10 @@ def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
         scaler_type = categorize_column(col)
         if col in df.columns:  # Double-check column exists
             cols_by_scaler[scaler_type].append(col)
+
+    for scaler_type, columns in cols_by_scaler.items():
+        if columns:
+            print(f"  ✓ {scaler_type.upper()} scaler: {len(columns)} columns")
 
     # Initialize and apply scalers
     scalers = {
@@ -319,12 +361,17 @@ def normalize_features(df, scaler_dir=None, file_prefix="", config=None):
                     scaler_dir, f"{file_prefix}_{scaler_type}_scaler.pkl"
                 )
                 joblib.dump(scaler, scaler_path)
+                print(f"    → Saved {scaler_type} scaler to: {scaler_path}")
 
     return df, scalers["robust"], scalers["standard"], scalers["minmax"]
 
 
 def full_preprocessing_pipeline(input_path, output_dir, file_prefix=None, config=None):
     """Run complete preprocessing pipeline"""
+
+    print("=" * 60)
+    print("FOREX DATA PREPROCESSING PIPELINE")
+    print("=" * 60)
     # Create output directories
     output_dir = Path(output_dir)
     processed_dir = output_dir / "processed"
@@ -336,6 +383,8 @@ def full_preprocessing_pipeline(input_path, output_dir, file_prefix=None, config
     # Load data
     df = load_data(input_path)
     df = handle_timestamp_index(df)
+    print(f"Data loaded: {df.shape[0]:,} rows, {df.shape[1]} columns")
+    print(f"Date range: {df.index.min()} to {df.index.max()}")
 
     # Get feature flags from config
     features_config = get_feature_config(config)
@@ -355,7 +404,11 @@ def full_preprocessing_pipeline(input_path, output_dir, file_prefix=None, config
         df = add_time_features(df)
 
     # Clean data
+    rows_before = df.shape[0]
     df = df.dropna()
+    rows_after = df.shape[0]
+    print(f"Data cleaning: dropped {rows_before - rows_after:,} rows with NaN values")
+    print(f"Final dataset: {rows_after:,} rows, {df.shape[1]} columns")
 
     # Determine output paths
     if config and file_prefix in [None, "processed"]:
@@ -376,11 +429,20 @@ def full_preprocessing_pipeline(input_path, output_dir, file_prefix=None, config
     # Save processed data
     df_processed = handle_timestamp_index(df.copy())
     df_processed.to_pickle(processed_path)
+    print(f"Saved processed data to: {processed_path}")
 
     # Normalize and save
     df_normalized, *scalers = normalize_features(df, scalers_dir, scaler_prefix, config)
     df_normalized = handle_timestamp_index(df_normalized)
     df_normalized.to_pickle(normalized_path)
+    print(f"Saved normalized data to: {normalized_path}")
+
+    print("=" * 60)
+    print("PREPROCESSING COMPLETE")
+    print(
+        f"✓ Final output: {df_normalized.shape[0]:,} rows, {df_normalized.shape[1]} columns"
+    )
+    print("=" * 60)
 
     return df_normalized
 
@@ -395,8 +457,17 @@ def full_preprocessing_pipeline(input_path, output_dir, file_prefix=None, config
 @click.option("--prefix", "-p", default="processed", help="File prefix")
 def main(config, mode, input_path, output, prefix):
     """Forex Data Preprocessing Pipeline"""
+    click.echo("\n" + "=" * 60)
+    click.echo("FOREX DATA PREPROCESSING PIPELINE")
+    click.echo("=" * 60)
+    click.echo(f"Mode: {mode}")
+
     # Load config
     config_data = load_config(config) if config else None
+    if config:
+        click.echo(f"Config loaded from: {config}")
+    else:
+        click.echo("No config file provided - using defaults")
 
     # Determine input file
     if not input_path:
@@ -405,7 +476,7 @@ def main(config, mode, input_path, output, prefix):
 
         try:
             paths, _, _ = build_file_paths_from_config(config_data)
-            input_path = paths["processed"]
+            input_path = paths["resampled"]
         except ValueError as e:
             if "data" in config_data and "raw" in config_data["data"]:
                 input_path = config_data["data"]["raw"]
@@ -415,14 +486,22 @@ def main(config, mode, input_path, output, prefix):
     if not os.path.exists(input_path):
         raise click.ClickException(f"Input file not found: {input_path}")
 
+    click.echo(f"Input file: {input_path}")
+
     if mode == "full":
         output_dir = output or "data"
+        click.echo(f"Output directory: {output_dir}")
+        click.echo("")
         full_preprocessing_pipeline(input_path, output_dir, prefix, config_data)
 
     elif mode == "features":
+        click.echo("Running features-only mode...")
+        click.echo("")
+
         # Features-only mode
         df = load_data(input_path)
         df = handle_timestamp_index(df)
+        click.echo(f"Data loaded: {df.shape[0]:,} rows, {df.shape[1]} columns")
 
         # Add features based on config
         features_config = get_feature_config(config_data)
@@ -434,7 +513,12 @@ def main(config, mode, input_path, output, prefix):
         df = handle_timestamp_column(df)
         if features_config.get("add_time_features", True):
             df = add_time_features(df)
+
+        rows_before = df.shape[0]
         df = df.dropna()
+        rows_after = df.shape[0]
+        if rows_before != rows_after:
+            click.echo(f"Dropped {rows_before - rows_after:,} rows with NaN values")
 
         # Determine output path
         if output:
@@ -451,6 +535,8 @@ def main(config, mode, input_path, output, prefix):
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         df = handle_timestamp_index(df)
         df.to_pickle(output_path)
+        click.echo(f"\n✓ Features saved to: {output_path}")
+        click.echo(f"Final dataset: {df.shape[0]:,} rows, {df.shape[1]} columns")
 
 
 if __name__ == "__main__":
