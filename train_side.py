@@ -45,8 +45,8 @@ FEATURES_COLS = [
     "log_atr60",
     "atr14_adjusted_return",
     "adx14",
-    'plus_di14',
-    'minus_di14',
+    "plus_di14",
+    "minus_di14",
     "rsi14",
     "rsi14_slope",
     "macd_diff",
@@ -98,6 +98,8 @@ def main(config_path="config/config.yaml"):
         nhead=4,
         dim_feedforward=256,
         dropout=0.4,
+        label_smoothing=0.0,
+        pool="last",
         use_class_weights=True,
     )
 
