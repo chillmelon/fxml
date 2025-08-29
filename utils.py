@@ -13,6 +13,22 @@ def load_config(config_path="config/config.yaml"):
     return config
 
 
+def load_data(file_path):
+    """Load data from pickle or CSV file"""
+    file_path = str(file_path)
+    print(f"Loading data from {file_path}")
+
+    if file_path.endswith(".pkl"):
+        df = pd.read_pickle(file_path)
+    elif file_path.endswith(".csv"):
+        df = pd.read_csv(file_path)
+    else:
+        raise ValueError("Unsupported file format. Please use .pkl or .csv")
+
+    print(f"Data loaded with shape: {df.shape}")
+    return df
+
+
 def parse_threshold(threshold_str):
     """Parse threshold string like '123M', '58K', or '1000000' to float value
 
@@ -124,7 +140,7 @@ def build_file_paths_from_config(config, base_dir="./data"):
     label_event = config.get("events", {}).get(
         "type", "cusum"
     )  # Could be made configurable
-    label_name = f"{resampled_name}-{label_event}"
+    event_name = f"{resampled_name}-{label_event}"
 
     # Base directories
     base_path = Path(base_dir)
@@ -132,11 +148,12 @@ def build_file_paths_from_config(config, base_dir="./data"):
     # File paths
     paths = {
         "normalized": base_path / "normalized" / f"{resampled_name}-normalized.pkl",
-        "direction_labels": base_path / "direction_labels" / f"{label_name}.pkl",
+        "direction_labels": base_path / "direction_labels" / f"{event_name}.pkl",
         "processed": base_path / "processed" / f"{resampled_name}-processed.pkl",
         "resampled": base_path / "resampled" / f"{resampled_name}.pkl",
-        "labels": base_path / "labels" / f"{label_name}-labels.pkl",
-        "meta_labels": base_path / "meta_labels" / f"{label_name}-meta.pkl",
+        "events": base_path / "events" / f"{event_name}.pkl",
+        "labels": base_path / "labels" / f"{event_name}-labels.pkl",
+        "meta_labels": base_path / "meta_labels" / f"{event_name}-meta.pkl",
     }
 
     return paths, sample_event, label_event

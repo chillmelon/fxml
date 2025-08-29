@@ -32,31 +32,8 @@ import os
 
 import click
 import pandas as pd
-import yaml
 
-from utils import normalize_date_format
-
-
-def load_config(config_path):
-    """Load configuration from YAML file"""
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
-    return config
-
-
-def load_data(file_path):
-    """Load data from pickle or CSV file"""
-    print(f"Loading data from {file_path}")
-
-    if file_path.endswith(".pkl"):
-        df = pd.read_pickle(file_path)
-    elif file_path.endswith(".csv"):
-        df = pd.read_csv(file_path)
-    else:
-        raise ValueError("Unsupported file format. Please use .pkl or .csv")
-
-    print(f"Data loaded with shape: {df.shape}")
-    return df
+from utils import load_config, load_data, normalize_date_format
 
 
 def filter_data_by_date_range(df, start_date=None, end_date=None):
@@ -336,8 +313,6 @@ def resample_data(
 
     print("=" * 60)
     print("RESAMPLING COMPLETED SUCCESSFULLY!")
-    print(f"Output file: {output_path}")
-    print(f"Resampled data shape: {result.shape}")
     print("=" * 60)
 
     return result, output_path
