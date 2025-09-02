@@ -7,9 +7,9 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
 
 from datamodules.event_based_data_module import EventBasedDataModule
+from libs.utils import build_file_paths_from_config, get_device, load_config
 from models.classification.simple_transformer_model import SimpleTransformerModule
 from models.classification.t2v_transformer_model import T2VTransformerModule
-from utils import build_file_paths_from_config, get_device, load_config
 
 # Default configurable parts (can be overridden by config)
 MODEL_NAME = "simple_transformer"

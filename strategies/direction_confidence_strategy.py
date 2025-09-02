@@ -9,7 +9,7 @@ class DirectionConfidenceStrategy(Strategy):
 
         self.buy_count = 0
         self.sell_count = 0
-        self.confidence_threshold = 0.5
+        self.confidence_threshold = 0.4
 
     def next(self):
         close = self.data.Close[-1]

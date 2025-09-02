@@ -8,7 +8,7 @@ import click
 import pandas as pd
 
 from libs.events import EventProcessor, validate_event_data
-from utils import build_file_paths_from_config, load_config
+from libs.utils import build_file_paths_from_config, load_config
 
 
 def load_and_validate_data(

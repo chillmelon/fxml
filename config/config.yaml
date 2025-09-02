@@ -2,7 +2,7 @@
 
 # Data configuration (preparation phase)
 data:
-  raw: data/raw/dukascopy-usdjpy-tick-2020-01-01-2024-12-31.csv
+  raw: data/raw/dukascopy-eurusd-tick-2020-01-01-2024-12-31.csv
 
 # Resampling configuration
 resampling:
@@ -21,6 +21,30 @@ events:
   # Event sampling configuration
   type: CUSUM # 'cusum' or 'volatility'
   threshold: 2.52e-04 # CUSUM threshold for event detection
+
+# Labeling configuration
+labeling:
+  # Volatility calculation
+  volatility:
+    method: atr # 'atr' or 'daily_vol'
+    atr_window: 20
+    daily_vol_span: 100
+
+  # Triple barrier parameters
+  barriers:
+    pt_sl_multipliers: [1.0, 1.0] # [profit_taking, stop_loss]
+    vertical_barrier_minutes: 120 # Minutes for time-based exit
+    min_ret_factor: 0.5 # Minimum return threshold as factor of mean target
+
+  # Processing parameters
+  processing:
+    num_threads: 20
+    intraday_only: true # Keep only intraday events
+
+  # Output settings
+  output:
+    dir: data/direction_labels
+    suffix: direction_labels
 
 # Preprocessing configuration
 preprocessing:
