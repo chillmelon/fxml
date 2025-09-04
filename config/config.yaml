@@ -24,12 +24,13 @@ events:
 
 # Labeling configuration
 labeling:
+  type: Z # 'TB' or 'Z'
   # Volatility calculation
   volatility:
     method: atr # 'atr' or 'daily_vol'
     atr_window: 20
     daily_vol_span: 100
-
+  z: 0.4
   # Triple barrier parameters
   barriers:
     pt_sl_multipliers: [1.0, 1.0] # [profit_taking, stop_loss]

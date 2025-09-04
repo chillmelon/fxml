@@ -141,6 +141,7 @@ def build_file_paths_from_config(config, base_dir="./data"):
         "type", "cusum"
     )  # Could be made configurable
     event_name = f"{resampled_name}-{label_event}"
+    label_name = config.get("labeling", {}).get("type", "TB")
 
     # Base directories
     base_path = Path(base_dir)
@@ -148,7 +149,9 @@ def build_file_paths_from_config(config, base_dir="./data"):
     # File paths
     paths = {
         "normalized": base_path / "normalized" / f"{resampled_name}-normalized.pkl",
-        "direction_labels": base_path / "direction_labels" / f"{event_name}.pkl",
+        "direction_labels": base_path
+        / "direction_labels"
+        / f"{event_name}-{label_name}.pkl",
         "processed": base_path / "processed" / f"{resampled_name}-processed.pkl",
         "resampled": base_path / "resampled" / f"{resampled_name}.pkl",
         "events": base_path / "events" / f"{event_name}.pkl",
