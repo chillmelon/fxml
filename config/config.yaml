@@ -7,11 +7,11 @@ data:
 # Resampling configuration
 resampling:
   type: time # 'time' or 'dollar'
-  minutes: 1 # For time-based resampling
+  minutes: 5 # For time-based resampling
   threshold: 421558000000 # For dollar bar resampling
   symbol: "USDJPY"
   date_range:
-    start_date: "20210101" # Format: YYYYMMDD
+    start_date: "20240101" # Format: YYYYMMDD
     end_date: "20241231" # Format: YYYYMMDD
   output:
     dir: data/resampled
@@ -24,7 +24,7 @@ events:
 
 # Labeling configuration
 labeling:
-  type: Z # 'TB' or 'Z'
+  type: TB # 'TB' or 'Z'
   # Volatility calculation
   volatility:
     method: atr # 'atr' or 'daily_vol'

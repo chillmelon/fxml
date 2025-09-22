@@ -11,10 +11,12 @@ from strategies.label_test_strategy import LabelTestStrategy
 
 def main():
     history = pd.read_pickle(
-        "./data/processed/USDJPY-1m-20210101-20241231-processed.pkl"
+        "./data/processed/USDJPY-1m-20240101-20241231-processed.pkl"
     )
 
-    labels = pd.read_pickle("./data/predictions/USDJPY-1m-20210101-20241231-CUSUM.pkl")
+    labels = pd.read_pickle(
+        "./data/predictions/USDJPY-1m-20240101-20241231-CUSUM-TB.pkl"
+    )
 
     history = history.join(labels, how="left")
     history["time"] = history.index
