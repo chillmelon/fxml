@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 import click
 import pandas as pd
 
-from libs.events import EventProcessor, validate_event_data
+from libs.filters import EventProcessor, validate_event_data
 from libs.utils import build_file_paths_from_config, load_config
 
 

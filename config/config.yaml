@@ -7,7 +7,7 @@ data:
 # Resampling configuration
 resampling:
   type: time # 'time' or 'dollar'
-  minutes: 5 # For time-based resampling
+  minutes: 10 # For time-based resampling
   threshold: 421558000000 # For dollar bar resampling
   symbol: "USDJPY"
   date_range:
@@ -19,7 +19,8 @@ resampling:
 
 events:
   # Event sampling configuration
-  type: CUSUM # 'cusum' or 'volatility'
+  type: Z-SCORE-W100-1Z # 'cusum' or 'volatility'
+  # type: CUSUM_0.00033 # 'cusum' or 'volatility'
   threshold: 2.52e-04 # CUSUM threshold for event detection
 
 # Labeling configuration
