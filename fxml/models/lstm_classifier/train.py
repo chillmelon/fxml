@@ -10,6 +10,7 @@ from lightning.pytorch.profilers import SimpleProfiler
 from fxml.data.datamodules.event_based_datamodule import EventBasedDataModule
 from fxml.data.datasets.direction_dataset import DirectionDataset
 from fxml.models.lstm_classifier.model import LSTMClassifierModule
+from fxml.utils import get_device
 
 
 def main():
@@ -56,7 +57,7 @@ def main():
 
     # Training
     trainer = Trainer(
-        accelerator="mps",
+        accelerator=get_device(),
         devices=1,
         profiler=profiler,
         callbacks=[checkpoint_callback, early_stopping],

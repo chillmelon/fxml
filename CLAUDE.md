@@ -4,119 +4,228 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a machine learning forex trading strategy project that implements deep learning models for predicting price movements in the USD/JPY currency pair. The project follows a complete ML pipeline from data preprocessing to backtesting trading strategies.
+Machine learning forex trading strategy project implementing deep learning models (Transformers, LSTMs) for predicting price movements in the USD/JPY currency pair. The project follows a complete ML pipeline from data preprocessing to backtesting.
+
+## Environment Setup
+
+```bash
+# Create virtual environment using uv
+uv venv .venv
+source .venv/bin/activate  # Unix/macOS
+# .venv\Scripts\activate   # Windows
+
+# Install dependencies
+uv sync
+
+# Or using Make
+make create_environment
+make requirements
+```
 
 ## Development Commands
 
-### Environment Setup
-```bash
-# Create virtual environment (using uv package manager)
-uv venv .venv
-source .venv/bin/activate
+### Training Models
 
-# Install dependencies
-uv pip install -r pyproject.toml
+Each model type has its own training script in `fxml/models/<model_type>/train.py`:
+
+```bash
+# Train transformer classifier (direction prediction)
+python -m fxml.models.transformer_classifier.train
+
+# Train transformer regressor (return prediction)
+python -m fxml.models.transformer_regressor.train
+
+# Train LSTM classifier
+python -m fxml.models.lstm_classifier.train
+
+# Train LSTM regressor
+python -m fxml.models.lstm_regressor.train
 ```
 
-### Main Training Scripts
-- `python train_side.py` - Train direction classification models (side prediction)
-- `python train_ret.py` - Train return regression models  
-- `python main.py` - Simple hello world entry point
-- `python preprocessing.py` - Data preprocessing pipeline with configurable parameters
-- `python predict.py` - Model inference/prediction
-- `python backtest.py` - Backtesting framework
-- `python mt5_backtest.py` - MetaTrader 5 specific backtesting
+### Model Inference & Backtesting
 
-### Development Workflow
 ```bash
+# Generate predictions from trained model
+python predict.py
+
+# Run backtest on trading strategy
+python backtest.py
+
+# MetaTrader 5 specific backtesting
+python mt5_backtest.py
+```
+
+### Monitoring & Exploration
+
+```bash
+# View training metrics in TensorBoard
+tensorboard --logdir lightning_logs
+
 # Launch Jupyter for exploration
 jupyter notebook
+```
 
-# Data preprocessing with custom parameters
-python preprocessing.py --input <path> --output <path> --threshold 3e-5 --time_gap_tolerance 60
+### Utilities
 
-# View TensorBoard logs
-tensorboard --logdir lightning_logs
+```bash
+# Clean compiled Python files
+make clean
 ```
 
 ## Architecture Overview
 
-### Data Pipeline
-- **Raw Data**: Located in `data/raw/` (tick and bar data from Dukascopy and Oanda)
-- **Resampling**: Convert tick data to time/event-based bars using `libs/resampling.py`
-- **Feature Engineering**: Technical indicators, log returns, cyclic time features in `preprocess/`
-- **Normalization**: MinMax and Standard scalers stored in `data/scalers/`
-- **Labeling**: Event-based directional labels using CUSUM filters in `data/direction_labels/`
+### Package Structure
 
-### Model Architecture
-The project implements several deep learning models in `models/`:
+The project is organized as a Python package under `fxml/`:
 
-#### Classification Models (`models/classification/`)
-- **SimpleTransformerModel**: Transformer with positional encoding for sequence classification
-- **T2VTransformerModel**: Time2Vec + Transformer for temporal patterns
-- **GRUModule**: GRU-based recurrent network
-- **LSTMModule**: LSTM-based recurrent network
+- `fxml/data/` - Data loading, preprocessing, and datasets
+  - `datasets/` - PyTorch Dataset implementations
+  - `datamodules/` - PyTorch Lightning DataModules
+  - `preprocessing/` - Feature engineering and event filters
+- `fxml/models/` - Model architectures organized by type
+  - `transformer_classifier/` - Transformer for direction prediction
+  - `transformer_regressor/` - Transformer for return prediction
+  - `lstm_classifier/` - LSTM for direction prediction
+  - `lstm_regressor/` - LSTM for return prediction
+- `fxml/trading/` - Trading strategies and backtesting
+  - `strategies/` - Strategy implementations
+  - `mqpy/` - MetaTrader integration utilities
+- `fxml/visualization/` - Plotting and evaluation tools
 
-#### Model Training Framework
-- Built on PyTorch Lightning for scalable training
-- Automatic device detection (CUDA/MPS/CPU)  
-- TensorBoard logging and model checkpointing
-- Early stopping and learning rate scheduling
+### Data Pipeline Flow
 
-### Data Loading
-- **EventBasedDataModule**: Lightning data module for event-driven sampling
-- **DirectionDataset**: Custom dataset for sequence-based directional prediction
-- **ConfidenceDataset**: Dataset with confidence/meta-labeling support
+1. **Raw Data** (`data/raw/`) - Original market data (tick/bar data from Dukascopy/Oanda)
+2. **Intermediate** (`data/interm/`) - Resampled data (time/event-based bars)
+3. **Processed** (`data/processed/`) - Feature-engineered data with technical indicators
+4. **Direction Labels** (`data/direction_labels/`) - Event-based directional labels using CUSUM/Z-score filters
+5. **Predictions** (`data/predictions/`) - Model inference outputs
+
+### Event-Based Labeling System
+
+The project uses event-driven labeling rather than fixed-time intervals:
+
+- **CUSUM Filter** (`fxml/data/preprocessing/filters.py:cusum_filter`) - Detects events when cumulative price movements exceed a threshold
+- **Z-Score Filter** (`fxml/data/preprocessing/filters.py:z_score_filter`) - Triggers events when price deviates significantly from moving average
+
+This produces sparse labels at significant market events, which are then used for training.
+
+### Model Training Architecture
+
+All models use PyTorch Lightning for standardized training:
+
+1. **Configuration** - YAML files in `configs/` define:
+   - Data paths and feature columns
+   - Model hyperparameters (architecture, layers, dropout)
+   - Training parameters (batch size, learning rate, validation split)
+
+2. **DataModule Pattern** - `EventBasedDataModule` handles:
+   - Loading processed data and event labels
+   - Creating sequence datasets with lookback windows
+   - Train/validation temporal splits (no data leakage)
+   - DataLoader configuration with batching
+
+3. **Dataset Pattern** - `DirectionDataset` and `ReturnDataset`:
+   - Takes event timestamps and creates sequences
+   - Extracts `sequence_length` bars before each event
+   - Returns (features, target, index) tuples
+
+4. **Training Loop** - Handled by Lightning Trainer with:
+   - Automatic device selection (CUDA/MPS/CPU)
+   - TensorBoard logging
+   - Model checkpointing (best and last)
+   - Early stopping on validation loss
+   - Learning rate scheduling
+
+### Model Architectures
+
+**Transformer Models** (`fxml/models/transformer_*/model.py`):
+- Input projection layer (features → d_model)
+- Positional encoding for temporal awareness
+- Multi-head self-attention encoder layers
+- Pooling strategy: "mean" (average all timesteps) or "last" (final timestep)
+- Output layer for classification or regression
+
+**LSTM Models** (`fxml/models/lstm_*/model.py`):
+- Standard LSTM architecture
+- Configurable hidden size and number of layers
+- Dropout for regularization
+- Final hidden state used for prediction
+
+### Feature Engineering
+
+Located in `fxml/data/preprocessing/features.py`:
+
+- **Return Features** - Delta, percent return, log return with rolling means
+- **Technical Indicators** - Using `pandas_ta`:
+  - Volatility: RV (Realized Volatility), ATR, Bollinger Bands
+  - Momentum: RSI, MACD, Stochastic
+  - Trend: EMA, ADX, Donchian Channels
+- **Time Features** - Cyclical encoding (sin/cos pairs) for hour, day of week, day of month, month
+
+Configuration driven by `configs/features.yaml`.
 
 ### Trading Strategy Framework
-Located in `strategies/`:
-- **DirectionModelStrategy**: Uses ML model predictions for trade signals
-- **SimpleStrategy**: Basic rule-based trading
-- Integration with `backtesting` library for performance evaluation
 
-### Key Configuration
-- `config/config.yaml`: Central configuration for data paths, model hyperparameters, and training settings
-- Configurable sequence lengths, feature sets, and target horizons
-- Support for multiple timeframes (1m, 5m, 58m-dollar bars, etc.)
+Strategies inherit from `backtesting.Strategy`:
 
-## Data Structure
+- **DirectionModelStrategy** - Uses classifier predictions for long/short signals
+- **DuoModelStrategy** - Combines direction and confidence models
+- **DirectionConfidenceStrategy** - Trades only when confidence is high
+- **LabelTestStrategy** - Validates event labels by trading directly on them
 
-The project uses a hierarchical data organization:
-- `data/raw/` - Original market data files
-- `data/resampled/` - Time/event-based resampled data  
-- `data/processed/` - Feature-engineered data
-- `data/normalized/` - Scaled data ready for training
-- `data/direction_labels/` - Event-based directional labels
-- `data/meta_labels/` - Meta-labeling for confidence estimation
-- `data/predictions/` - Model output predictions
+Backtesting uses the `backtesting` library with OHLCV data joined with model predictions.
+
+## Configuration System
+
+All training configs in `configs/`:
+- `transformer_classifier.yaml` - Transformer direction model
+- `transformer_regressor.yaml` - Transformer return model
+- `lstm_classifier.yaml` - LSTM direction model
+- `lstm_regressor.yaml` - LSTM return model
+- `features.yaml` - Feature engineering settings
+
+Config structure:
+```yaml
+data:
+  dataset_path: path/to/processed/data.pkl
+  label_path: path/to/labels.pkl
+  features: [list of feature column names]
+  target: target_column_name
+  sequence_length: 24  # lookback window
+
+model:
+  name: "model_name"
+  # architecture hyperparameters
+
+training:
+  batch_size: 1024
+  val_split: 0.2
+  num_workers: 0  # CPU workers for DataLoader
+  shuffle: True
+```
 
 ## Important Implementation Details
 
-### Event-Based Sampling
-The system uses event-based sampling (e.g., dollar bars, volume bars) rather than just time-based bars for more informative market microstructure analysis.
+### Temporal Ordering
 
-### Feature Engineering
-- Cyclic encoding for temporal features (hour_cos, dow_cos, etc.)
-- Technical indicators via `ta` library
-- Log returns and volatility-adjusted features
-- Multi-timeframe feature aggregation
+The system maintains strict temporal order to prevent data leakage:
+- Labels are sorted by timestamp before train/val split
+- Validation set is always the most recent data (last `val_split` proportion)
+- Sequences are created by looking back in time from event timestamps
+- No shuffling across train/val boundary
 
-### Model Training Pipeline
-1. Load normalized data and event labels
-2. Create train/validation splits maintaining temporal order
-3. Use class weighting for imbalanced datasets
-4. Lightning trainer with callbacks for checkpointing and early stopping
-5. TensorBoard logging for monitoring
+### Model Checkpoints
 
-### Trading Strategy Implementation
-Strategies integrate with the `backtesting` library and can use:
-- Model predictions as signals
-- Dynamic stop-loss and take-profit based on volatility (ATR)
-- Position sizing and risk management
+Saved in `lightning_logs/<model_name>/version_X/checkpoints/`:
+- `best_checkpoint.ckpt` - Best validation loss
+- `last.ckpt` - Most recent epoch
 
-### Notebooks for Exploration
-The `notebook/` directory contains Jupyter notebooks for:
-- Data exploration and visualization
-- Feature engineering experiments  
-- Model evaluation and analysis
-- Trading strategy development and testing
+Load with: `Model.load_from_checkpoint("path/to/checkpoint.ckpt")`
+
+### Prediction Workflow
+
+1. Load checkpoint with trained model
+2. Load processed data and create dataset
+3. Run inference to generate predictions
+4. Save predictions to `data/predictions/` as pickle
+5. Join predictions with OHLCV data for backtesting
