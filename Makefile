@@ -47,6 +47,11 @@ create_environment:
 data: requirements
 	$(PYTHON_INTERPRETER) fxml/dataset.py
 
+## Make resampled dataset
+.PHONY: resample
+resample:
+	$(PYTHON_INTERPRETER) -m fxml.data.resample_data
+
 
 #################################################################################
 # Self Documenting Commands                                                     #

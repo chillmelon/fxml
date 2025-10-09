@@ -1,7 +1,7 @@
 # Data parameters
 data:
-  dataset_path: data/processed/USDJPY-5m-20240101-20241231_processed.pkl
-  label_path: data/direction_labels/USDJPY-5m-20240101-20241231-Z-SCORE-W100-2Z-TB.pkl
+  dataset_path: data/processed/USDJPY-1m-20210101-20241231-processed.pkl
+  label_path: data/processed/direction_labels/USDJPY-1m-20210101-20241231-CUSUM-TB.pkl
   features:
     - log_fd_return
   target:

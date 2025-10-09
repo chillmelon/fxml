@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -14,6 +15,11 @@ def getWeights(d, lags):
         w.append(-w[-1] * ((d - k + 1)) / k)
     w = np.array(w).reshape(-1, 1)
     return w
+
+
+@lru_cache(maxsize=128)
+def getWeights_cached(d, lags):
+    return tuple(getWeights(d, lags).flatten())
 
 
 def cutoff_find(order, cutoff, start_lags):  #
@@ -35,10 +41,25 @@ def ts_differencing_tau(series, order, tau):
     # return the time series resulting from (fractional) differencing
     lag_cutoff = cutoff_find(order, tau, 1)  # finding lag cutoff with tau
     weights = getWeights(order, lag_cutoff)
-    res = 0
+    res = []
     for k in range(lag_cutoff):
         res += weights[k] * series.shift(k).fillna(0)
     return res[lag_cutoff:]
+
+
+def ts_differencing_tau_optimized(series, order, tau):
+    lag_cutoff = cutoff_find(order, tau, 1)
+    weights = getWeights(order, lag_cutoff).flatten()
+
+    # Create a matrix of lagged values
+    lagged_matrix = np.column_stack(
+        [series.shift(k).fillna(0) for k in range(lag_cutoff)]
+    )
+
+    # Dot product for weighted sum
+    res = lagged_matrix @ weights
+
+    return pd.Series(res, index=series.index)[lag_cutoff:]
 
 
 def main():
@@ -70,9 +91,12 @@ def main():
     tau = 1e-4
 
     for i in tqdm(range(len(possible_d))):
-        log_fd = ts_differencing_tau(df_log["close"], possible_d[i], tau)
+        log_fd = ts_differencing_tau_optimized(df_log["close"], possible_d[i], tau)
         adf_score = adfuller(log_fd)[1]
         if adf_score <= adf_threshold:
+            print(f"Found optimal d = {possible_d[i]:.2f}")
+            print(f"ADF p-value = {adf_score:.6f}")
+            print(f"Lag cutoff = {cutoff_find(possible_d[i], tau, 1)}")
             df["frac_log_return"] = log_fd
             break
 

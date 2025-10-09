@@ -1,0 +1,19 @@
+data:
+  raw: data/raw/dukascopy-usdjpy-tick-2020-01-01-2024-12-31.csv
+
+symbol: USDJPY
+resampling:
+  minutes:
+    - 1
+    - 2
+    - 3
+    - 5
+    - 15
+    - 60
+  date:
+    - from: 20210101
+      to: 20241231
+    - from: 20230101
+      to: 20231231
+    - from: 20240101
+      to: 20241231
