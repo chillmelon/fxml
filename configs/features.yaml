@@ -1,0 +1,27 @@
+features:
+  add_differences: true
+  add_technical_indicators: true
+  add_time_features: true
+
+  # Difference features
+  differences:
+    tao: 1e-4
+
+  # Technical indicator settings
+  technical_indicators:
+    rv_windows: [5, 15, 50]
+    ema_windows: [5, 20, 50, 100]
+    atr_windows: [14, 60, 120]
+    adx_windows: [14]
+    bollinger_bands:
+      window: 20
+      window_dev: 2
+    donchian_channel_windows: [20, 50, 100]
+    stochastic:
+      window: 14
+      smooth_window: 3
+    rsi_windows: [14, 25, 50]
+    macd:
+      window_slow: 26
+      window_fast: 12
+      window_sign: 9

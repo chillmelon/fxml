@@ -29,47 +29,6 @@ def load_data(file_path):
     return df
 
 
-def parse_threshold(threshold_str):
-    """Parse threshold string like '123M', '58K', or '1000000' to float value
-
-    Args:
-        threshold_str: String or numeric threshold
-
-    Returns:
-        float: Threshold value
-    """
-    if isinstance(threshold_str, (int, float)):
-        return float(threshold_str)
-
-    if isinstance(threshold_str, str):
-        threshold_str = threshold_str.lower().strip()
-
-        if threshold_str.endswith("m"):
-            return float(threshold_str[:-1]) * 1_000_000
-        elif threshold_str.endswith("k"):
-            return float(threshold_str[:-1]) * 1_000
-        else:
-            return float(threshold_str)
-
-    raise ValueError(f"Invalid threshold format: {threshold_str}")
-
-
-def convert_volume_millions_to_actual(
-    df, ask_vol_col="askVolume", bid_vol_col="bidVolume", target_col="volume"
-):
-    """Convert volume from millions to actual volume units"""
-    if ask_vol_col in df.columns and bid_vol_col in df.columns:
-        df[target_col] = (df[ask_vol_col] + df[bid_vol_col]) * 1_000_000
-    return df
-
-
-def ensure_directory_exists(file_path):
-    """Create directory for file path if it doesn't exist"""
-    directory = os.path.dirname(file_path)
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-
-
 def get_device():
     """Get the best available device for PyTorch"""
     if torch.cuda.is_available():
@@ -116,31 +75,18 @@ def normalize_date_format(date_str):
 def build_file_paths_from_config(config, base_dir="./data"):
     """Build standardized file paths from config parameters"""
     # Extract resampling config
-    resampling = config.get("resampling", {})
-    symbol = resampling.get("symbol", "UNKNOWN")
-    date_range = resampling.get("date_range", {})
-    start_date = normalize_date_format(date_range.get("start_date", "20200101"))
-    end_date = normalize_date_format(date_range.get("end_date", "20241231"))
+    data_config = config.get("data", {})
+    symbol = data_config.get("symbol", "UNKNOWN")
+    date_range = data_config.get("date_range", {})
+    start_date = date_range.get("start_date", "20200101")
+    end_date = date_range.get("end_date", "20241231")
 
     # Build event name based on resampling type
-    if resampling.get("type") == "dollar":
-        threshold = resampling.get("threshold", 58000000)
-        threshold = parse_threshold(threshold)
-        if threshold >= 1000000:
-            threshold_str = f"{int(threshold/1000000)}m"
-        else:
-            threshold_str = str(int(threshold))
-        sample_event = f"{threshold_str}-dollar"
-    else:
-        minutes = resampling.get("minutes", 5)
-        sample_event = f"{minutes}m"
+    minutes = data_config.get("minutes", 5)
 
     # Build base names
-    resampled_name = f"{symbol}-{sample_event}-{start_date}-{end_date}"
-    label_event = config.get("events", {}).get(
-        "type", "cusum"
-    )  # Could be made configurable
-    event_name = f"{resampled_name}-{label_event}"
+    resampled_name = f"{symbol}-{minutes}m-{start_date}-{end_date}"
+    event_name = config.get("data", {}).get("event_name")
     label_name = config.get("labeling", {}).get("type", "TB")
 
     # Base directories
@@ -155,7 +101,9 @@ def build_file_paths_from_config(config, base_dir="./data"):
         "processed": base_path / "processed" / f"{resampled_name}-processed.pkl",
         "resampled": base_path / "resampled" / f"{resampled_name}.pkl",
         "events": base_path / "events" / f"{event_name}.pkl",
-        "labels": base_path / "labels" / f"{event_name}-labels.pkl",
+        "labels": base_path
+        / "labels"
+        / f"{resampled_name}-{event_name}-{label_name}.pkl",
         "meta_labels": base_path / "meta_labels" / f"{event_name}-meta.pkl",
     }
 
