@@ -40,9 +40,7 @@ def main():
         pool=config["model"]["pool"],
     )
 
-    logger = TensorBoardLogger(
-        "lightning_logs", name=f"models/{config['model']['name']}"
-    )
+    logger = TensorBoardLogger("lightning_logs", name=f"{config['model']['name']}")
 
     profiler = SimpleProfiler(filename="profiler")
 
