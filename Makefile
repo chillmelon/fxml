@@ -52,6 +52,10 @@ data: requirements
 resample:
 	$(PYTHON_INTERPRETER) -m fxml.data.resample_data
 
+## Make dataset with features
+.PHONY: features
+features:
+	$(PYTHON_INTERPRETER) -m fxml.data.build_features
 
 #################################################################################
 # Self Documenting Commands                                                     #

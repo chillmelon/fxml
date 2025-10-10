@@ -1,7 +1,11 @@
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 
-from src.utils import load_config
+from fxml.data.preprocessing.fractional_differentiation import (
+    find_optimal_fraction,
+    ts_differencing_tau,
+)
 
 
 def handle_timestamp_index(df, timestamp_col="timestamp"):
@@ -20,102 +24,85 @@ def handle_timestamp_column(df, timestamp_col="timestamp"):
     return df
 
 
-def add_differences(df):
-    df_log = np.log(df["close"])
-    df["return"] = df["close"] - df["close"].shift(1)
-    df["log_return"] = df_log["close"] - df_log["close"].shift(1)
-    return
-
-
-def add_return_features(df, price_col="close", config=None):
+def add_returns(df, config={}):
     """Add return features (delta, return, log return)"""
     print("Adding return features...")
     df = df.copy()
 
-    # Basic return features
-    df[f"{price_col}_delta"] = df[price_col] - df[price_col].shift(1)
-    df[f"{price_col}_return"] = df[price_col] / df[price_col].shift(1) - 1
-    df[f"{price_col}_log_return"] = np.log(df[price_col] / df[price_col].shift(1))
+    price_cols = config.get("price_cols", ["close"])
+    d_value = config.get("d_value", None)
 
-    return_config = (
-        config.get("preprocessing", {}).get("features", {}).get("return_features", {})
-        if config
-        else {}
-    )
-    rolling_windows = return_config.get("rolling_mean_windows", [5, 10])
+    for col in price_cols:
+        # Basic return features
+        df[f"{col}_pct_return"] = df[col] / df[col].shift(1) - 1
+        df[f"{col}_return"] = df[col] - df[col].shift(1)
+        df[f"{col}_log_return"] = np.log(df[col] / df[col].shift(1))
+        if d_value is not None:
+            df[f"{col}_fd_return"] = ts_differencing_tau(df[col], 0.5, 1e-5)
+        else:
+            print("Finding optimal d_value...")
+            d_value, optimal_fd = find_optimal_fraction(df[col], 1e-5, 0.01)
+            df[f"{col}_fd_return"] = optimal_fd
+        print(f"✓ Frational Fifferentiations, d-value: {d_value}")
 
-    # Add rolling return means
-    for window in rolling_windows:
-        df[f"ret_mean_{window}"] = (
-            df[f"{price_col}_log_return"]
-            .rolling(window=window, min_periods=window)
-            .mean()
-        )
-    if rolling_windows:
-        print(f"  ✓ Added rolling return means for windows: {rolling_windows}")
-
-    # Add log volume
-    if return_config.get("log_volume", True) and "volume" in df.columns:
-        df["log_volume"] = np.log1p(df["volume"])
-        print(f"  ✓ Added log volume")
-
-    df.replace([np.inf, -np.inf], np.nan, inplace=True)
     return df
 
 
-def add_technical_indicators(df, config=None):
+def add_technical_indicators(df, config={}):
     """Add technical indicators"""
     print("Adding technical indicators...")
     df = df.copy()
-    ta_config = (
-        config.get("preprocessing", {})
-        .get("features", {})
-        .get("technical_indicators", {})
-        if config
-        else {}
-    )
 
     # RV (Realized Volatility)
-    rv_windows = ta_config.get("rv_windows", [5, 10, 15, 20])
-    for window in rv_windows:
-        df[f"rv{window}"] = df["close_log_return"].pow(2).rolling(window).sum()
-        df[f"log_rv{window}"] = np.log1p(df[f"rv{window}"])
-        df[f"sqrt_rv{window}"] = df[f"rv{window}"].pow(0.5)
-    print(f"  ✓ RV features for windows: {rv_windows}")
+    # rv_windows = config.get("rv_windows", [5, 10, 15, 20])
+    # for window in rv_windows:
+    #     df[f"rv{window}"] = df["close_log_return"].pow(2).rolling(window).sum()
+    #     df[f"log_rv{window}"] = np.log1p(df[f"rv{window}"])
+    #     df[f"sqrt_rv{window}"] = df[f"rv{window}"].pow(0.5)
+    # print(f"  ✓ RV features for windows: {rv_windows}")
 
     # EMAs
-    ema_windows = ta_config.get("ema_windows", [5, 20])
+    ema_windows = config.get("ema_windows", [5, 20])
     for window in ema_windows:
         df.ta.ema(length=window, append=True)
     print(f"  ✓ EMA features for windows: {ema_windows}")
 
     # ATR
-    atr_windows = ta_config.get("atr_windows", [14, 20])
+    atr_windows = config.get("atr_windows", [14, 20])
     for window in atr_windows:
         df.ta.atr(length=window, append=True)
+    print(f"  ✓ ATR features for windows: {atr_windows}")
 
     # ADX
-    adx_windows = ta_config.get("adx_windows", [14, 20])
+    adx_windows = config.get("adx_windows", [14, 20])
     for window in adx_windows:
         df.ta.adx(length=window, append=True)
     print(f"  ✓ ADX features for windows: {adx_windows}")
 
     # RSI
-    rsi_windows = ta_config.get("rsi_windows", [14, 20])
+    rsi_windows = config.get("rsi_windows", [14, 20])
     for window in rsi_windows:
         df.ta.rsi(length=window, append=True)
     print(f"  ✓ RSI features for windows: {rsi_windows}")
 
+    # Bollinger Bands
+    bb_windows = config.get("bb_windows", [14, 20])
+    for window in bb_windows:
+        df.ta.bbands(length=window, append=True)
+    print(f"  ✓ BBands features for windows: {bb_windows}")
+
     # MACD
-    macd_config = ta_config.get("macd", {"fast": 12, "slow": 26, "signal": 9})
-    df.ta.macd(
-        fast=macd_config["fast"],
-        slow=macd_config["slow"],
-        signal=macd_config["signal"],
-    )
-    print(
-        f"  ✓ MACD (fast={macd_config['fast']}, slow={macd_config['slow']}, signal={macd_config['signal']})"
-    )
+    macd_config = config.get("macd", [{"fast": 12, "slow": 26, "signal": 9}])
+    for conf in macd_config:
+        df.ta.macd(
+            fast=conf["fast"],
+            slow=conf["slow"],
+            signal=conf["signal"],
+            append=True,
+        )
+        print(
+            f"  ✓ MACD (fast={conf['fast']}, slow={conf['slow']}, signal={conf['signal']})"
+        )
     return df
 
 
