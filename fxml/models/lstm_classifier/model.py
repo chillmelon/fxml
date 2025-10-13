@@ -15,10 +15,9 @@ class LSTMClassifier(nn.Module):
             dropout=dropout,
         )
         self.linear = nn.Linear(n_hidden, output_size)
-        self.softmax = nn.Softmax(1)
 
     def forward(self, x):
-        self.lstm.flatten_parameters()
+        # self.lstm.flatten_parameters()
         _, (hidden, _) = self.lstm(x)
         last_hidden = hidden[-1]
         logits = self.linear(last_hidden)

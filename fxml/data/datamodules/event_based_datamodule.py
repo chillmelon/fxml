@@ -1,7 +1,7 @@
 import lightning as L
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader
 
 from fxml.data.datasets.direction_dataset import DirectionDataset
 
@@ -53,6 +53,7 @@ class EventBasedDataModule(L.LightningDataModule):
             features_cols=self.features,
             target_col=self.target,
         )
+        print(self.train_dataset[1])
 
         print("====== Start Building Validation Dataset =====")
         self.val_dataset = DirectionDataset(
@@ -62,6 +63,7 @@ class EventBasedDataModule(L.LightningDataModule):
             features_cols=self.features,
             target_col=self.target,
         )
+        print(self.val_dataset[1])
 
         print("====== End Setting Up Data Module =====")
 

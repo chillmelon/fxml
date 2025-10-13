@@ -31,6 +31,10 @@ def main():
     # drop NaN
     df.dropna(inplace=True)
 
+    # set timestamp index
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+    df = df.set_index("timestamp")
+
     # save file
     df.to_pickle(f"data/processed/{resampled_name}_FEATURES.pkl")
 
