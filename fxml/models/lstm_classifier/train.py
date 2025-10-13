@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import hydra
 import pandas as pd
 import torch
 import yaml
@@ -6,15 +9,15 @@ from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
+from omegaconf import DictConfig
 
 from fxml.data.datamodules.event_based_datamodule import EventBasedDataModule
-from fxml.data.datasets.direction_dataset import DirectionDataset
 from fxml.models.lstm_classifier.model import LSTMClassifierModule
 from fxml.utils import get_device
 
 
-def main():
-    config = yaml.safe_load(open("configs/lstm_classifier.yaml", "r"))
+@hydra.main(version_base=None, config_path="../../../configs", config_name="config")
+def main(config: DictConfig):
     df = pd.read_pickle(config["data"]["dataset_path"])
     label = pd.read_pickle(config["data"]["label_path"])
 
@@ -38,7 +41,10 @@ def main():
         dropout=config["model"]["dropout"],
     )
 
-    logger = TensorBoardLogger("lightning_logs", name=f"{config['model']['name']}")
+    logger = TensorBoardLogger(
+        "lightning_logs",
+        name=f"{config['model']['name']}_{Path(config["data"]["label_path"]).stem}",
+    )
 
     profiler = SimpleProfiler(filename="profiler")
 

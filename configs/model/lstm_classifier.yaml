@@ -1,0 +1,4 @@
+name: "lstm_classifier"
+n_hidden: 64
+n_layers: 2
+dropout: 0.1

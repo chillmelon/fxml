@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import hydra
 import pandas as pd
 import torch
 import yaml
@@ -6,6 +9,7 @@ from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
+from omegaconf import DictConfig
 
 from fxml.data.datamodules.return_datamodule import ReturnDataModule
 from fxml.models.lstm_regressor.lstm_regressor import LSTMRegressorModule
@@ -13,8 +17,8 @@ from fxml.models.transformer_regressor.model import TransformerRegressorModule
 from fxml.utils import get_device
 
 
-def main():
-    config = yaml.safe_load(open("configs/transformer_regressor.yaml", "r"))
+@hydra.main(version_base=None, config_path="../../../configs", config_name="config")
+def main(config: DictConfig):
     df = pd.read_pickle(config["data"]["dataset_path"])
     label = pd.read_pickle(config["data"]["label_path"])
 
@@ -41,7 +45,10 @@ def main():
         pool=config["model"]["pool"],
     )
 
-    logger = TensorBoardLogger("lightning_logs", name=f"{config['model']['name']}")
+    logger = TensorBoardLogger(
+        "lightning_logs",
+        name=f"{config['model']['name']}_{Path(config["data"]["label_path"]).stem}",
+    )
 
     profiler = SimpleProfiler(filename="profiler")
 
