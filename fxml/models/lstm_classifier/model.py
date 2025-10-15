@@ -26,7 +26,7 @@ class LSTMClassifier(nn.Module):
 
 class LSTMClassifierModule(pl.LightningModule):
     def __init__(
-        self, n_features=1, output_size=1, n_hidden=64, n_layers=2, dropout=0.0
+        self, n_features=1, output_size=3, n_hidden=64, n_layers=2, dropout=0.0
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -42,35 +42,36 @@ class LSTMClassifierModule(pl.LightningModule):
         self.criterion = nn.CrossEntropyLoss()
 
     def forward(self, x, labels=None):
-        output = self.model(x)
-        loss = 0
-        if labels is not None:
-            labels = labels.squeeze()
-            loss = self.criterion(output, labels)
-        return loss, output
+        return self.model(x)  # logits
 
     def training_step(self, batch, batch_idx):
         x, y, _ = batch
-        loss, out = self(x, y)
+        y = y.squeeze().long()
+        logits = self(x)
+        loss = self.criterion(logits, y)
 
         self.log("train_loss", loss, prog_bar=True, logger=True)
         return {"loss": loss}
 
     def validation_step(self, batch, batch_idx):
         x, y, _ = batch
-        loss, out = self(x, y)
+        y = y.squeeze().long()
+        logits = self(x)
+        loss = self.criterion(logits, y)
 
         self.log("val_loss", loss, prog_bar=True, logger=True)
         return {"loss": loss}
 
     def test_step(self, batch, batch_idx):
         x, y, _ = batch
-        loss, out = self(x, y)
+        y = y.squeeze().long()
+        logits = self(x)
+        loss = self.criterion(logits, y)
 
         self.log("test_loss", loss, prog_bar=True, logger=True)
         return {"loss": loss}
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
         return [optimizer], [scheduler]

@@ -3,7 +3,6 @@ from pathlib import Path
 import hydra
 import pandas as pd
 import torch
-import yaml
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
@@ -11,17 +10,17 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
 from omegaconf import DictConfig
 
-from fxml.data.datamodules.return_datamodule import ReturnDataModule
-from fxml.models.lstm_regressor.model import LSTMRegressorModule
+from fxml.data.datamodules.event_based_datamodule import EventBasedDataModule
+from fxml.models.model import build_model
 from fxml.utils import get_device
 
 
-@hydra.main(version_base=None, config_path="../../../configs", config_name="config")
+@hydra.main(version_base=None, config_path="./configs", config_name="config")
 def main(config: DictConfig):
     df = pd.read_pickle(config["data"]["dataset_path"])
     label = pd.read_pickle(config["data"]["label_path"])
 
-    dm = ReturnDataModule(
+    dm = EventBasedDataModule(
         data=df,
         labels=label,
         sequence_length=config["data"]["sequence_length"],
@@ -33,14 +32,7 @@ def main(config: DictConfig):
         shuffle=config["training"]["shuffle"],
     )
 
-    model = LSTMRegressorModule(
-        n_features=len(config["data"]["features"]),
-        output_size=1,
-        n_hidden=config["model"]["n_hidden"],
-        n_layers=config["model"]["n_layers"],
-        dropout=config["model"]["dropout"],
-    )
-
+    model = build_model(config["model"]["name"], config)
     logger = TensorBoardLogger(
         "lightning_logs",
         name=f"{config['model']['name']}_{Path(config["data"]["label_path"]).stem}",

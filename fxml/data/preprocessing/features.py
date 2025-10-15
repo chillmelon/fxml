@@ -39,11 +39,14 @@ def add_returns(df, config={}):
         df[f"{col}_log_return"] = np.log(df[col] / df[col].shift(1))
         if d_value is not None:
             df[f"{col}_fd_return"] = ts_differencing_tau(df[col], 0.5, 1e-5)
+            df[f"{col}_log_fd_return"] = ts_differencing_tau(np.log(df[col]), 0.5, 1e-5)
         else:
             print("Finding optimal d_value...")
             d_value, optimal_fd = find_optimal_fraction(df[col], 1e-5, 0.01)
             df[f"{col}_fd_return"] = optimal_fd
-        print(f"✓ Frational Fifferentiations, d-value: {d_value}")
+            _, optimal_log_fd = find_optimal_fraction(np.log(df[col]), 1e-5, 0.01)
+            df[f"{col}_log_fd_return"] = optimal_log_fd
+        print(f"✓ Frational fifferentiations, d-value: {d_value}")
 
     return df
 

@@ -1,6 +1,9 @@
+from typing import Union
+
 import lightning as L
 import numpy as np
 import torch
+from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
 
 from fxml.data.datasets.direction_dataset import DirectionDataset
@@ -35,6 +38,7 @@ class EventBasedDataModule(L.LightningDataModule):
 
         self.class_weights = None
         self._train_sample_weights = None
+        print(self.features)
 
     def setup(self, stage=None):
         print("====== Start Setting Up Data Module =====")
@@ -42,8 +46,8 @@ class EventBasedDataModule(L.LightningDataModule):
         sorted_events = self.labels.sort_index()
         n_val = int(len(sorted_events) * self.val_split)
 
-        val_events = sorted_events.iloc[-n_val:]
         train_events = sorted_events.iloc[:-n_val]
+        val_events = sorted_events.iloc[-n_val:]
 
         print("====== Start Building Training Dataset =====")
         self.train_dataset = DirectionDataset(
@@ -53,7 +57,6 @@ class EventBasedDataModule(L.LightningDataModule):
             features_cols=self.features,
             target_col=self.target,
         )
-        print(self.train_dataset[1])
 
         print("====== Start Building Validation Dataset =====")
         self.val_dataset = DirectionDataset(
@@ -63,7 +66,6 @@ class EventBasedDataModule(L.LightningDataModule):
             features_cols=self.features,
             target_col=self.target,
         )
-        print(self.val_dataset[1])
 
         print("====== End Setting Up Data Module =====")
 

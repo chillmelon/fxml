@@ -1,6 +1,8 @@
 from pathlib import Path
 
+import hydra
 import pandas as pd
+from omegaconf import DictConfig
 
 from fxml.data.preprocessing.features import (
     add_returns,
@@ -10,8 +12,10 @@ from fxml.data.preprocessing.features import (
 from fxml.utils import load_config
 
 
-def main():
-    config = load_config("configs/features.yaml")
+@hydra.main(
+    version_base=None, config_path="../../configs/preprocessing", config_name="features"
+)
+def main(config: DictConfig):
     resampled_path = config.get("data", {}).get("resampled", {})
     resampled_name = Path(resampled_path).stem
 

@@ -1,4 +1,6 @@
+import hydra
 import pandas as pd
+from omegaconf import DictConfig, OmegaConf
 
 from fxml.utils import load_config
 
@@ -76,17 +78,19 @@ def create_time_bar(df, minutes: int):
     return ohlcv
 
 
-def main():
+@hydra.main(version_base=None, config_path="../../configs", config_name="resampling")
+def main(config: DictConfig):
+    print(OmegaConf.to_yaml(config))
     print("=" * 60)
     print("FOREX DATA RESAMPLING PIPELINE")
     print("=" * 60)
 
-    config = load_config("configs/resample.yaml")
-    raw_path = config.get("data", {}).get("raw", {})
+    raw_path = config.get("symbol", {}).get("raw_path", "")
+    print('raw_path: "{}"'.format(raw_path))
 
-    symbol = config.get("symbol", "USDJPY")
-    minutes = config.get("resampling", {}).get("minutes", [5])
-    date_ranges = config.get("resampling", {}).get("date", [])
+    symbol = config.get("symbol", {}).get("symbol", "USDJPY")
+    minutes = config.get("minutes", [5])
+    date_ranges = config.get("date", [])
 
     print(f"Loading data from {raw_path}")
     df = pd.read_csv(raw_path)

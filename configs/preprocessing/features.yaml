@@ -1,16 +1,16 @@
 data:
-  resampled: data/resampled/USDJPY-5m-20240101-20241231.pkl
+  resampled: data/resampled/USDJPY-1m-20210101-20241231.pkl
 features:
   # Difference features
   returns:
     price_cols:
       - close
-    d_value: 0.19
+    d_value: 0.5
 
   # Technical indicator settings
   technical_indicators:
     rv_windows: [5, 15, 50]
-    ema_windows: [5, 20, 50, 100]
+    ema_windows: [5, 9, 20, 24, 36, 50, 100]
     atr_windows: [14, 60, 120]
     adx_windows: [14]
     rsi_windows: [14, 25, 50]
@@ -18,4 +18,7 @@ features:
     macd:
       - fast: 8
         slow: 17
+        signal: 9
+      - fast: 12
+        slow: 26
         signal: 9

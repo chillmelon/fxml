@@ -1,22 +1,19 @@
 # Data parameters
 defaults:
+  - _self_
   - data: cusum_classifier
   - model: lstm_classifier
-  - _self_
 
 hydra:
   sweeper:
     params:
-      data: emacross_9_20_meta,emacross_9_36_meta
+      data: cusum_classifier,zscore_classifier
       model: transformer_classifier,lstm_classifier
 
 # Training parameters
 training:
-  batch_size: 64
+  batch_size: 1024
   num_epochs: 100
   num_workers: 0
   val_split: 0.2
   shuffle: True
-# data:
-#   features:
-#     - close_log_fd_return
