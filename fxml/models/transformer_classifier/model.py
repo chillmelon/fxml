@@ -78,6 +78,7 @@ class TransformerClassifierModule(pl.LightningModule):
         dropout=0.1,
         label_smoothing=0.0,
         pool="mean",
+        lr=1e-3,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -96,6 +97,7 @@ class TransformerClassifierModule(pl.LightningModule):
         )
         self.train_acc = MulticlassAccuracy(num_classes=output_size)
         self.val_acc = MulticlassAccuracy(num_classes=output_size)
+        self.lr = lr
 
     def forward(self, x):
         return self.model(x)  # logits
@@ -128,7 +130,7 @@ class TransformerClassifierModule(pl.LightningModule):
         return self._step(batch, "test")
 
     def configure_optimizers(self):
-        opt = torch.optim.AdamW(self.parameters(), lr=3e-4, weight_decay=1e-4)
+        opt = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-4)
         # OneCycleLR (optional): replace StepLR for smoother training
         # steps_per_epoch = self.trainer.estimated_stepping_batches // self.trainer.max_epochs
         # sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=3e-4, total_steps=self.trainer.estimated_stepping_batches)

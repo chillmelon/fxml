@@ -26,6 +26,7 @@ class DirectionDataset(Dataset):
         self.features_cols = features_cols
         self.target_col = target_col
         self.features = data[features_cols]
+        self.targets = labels[target_col]
 
         self.t_events = labels.index
         self.X, self.y, self.t_events = self._create_sequences()
@@ -45,7 +46,7 @@ class DirectionDataset(Dataset):
 
             seq = self.features.iloc[start_idx:end_idx].values
 
-            label = self.labels.loc[event_time, self.target_col].values
+            label = self.targets.loc[event_time].values
 
             if len(seq) == self.sequence_length:
                 X.append(seq)
@@ -55,7 +56,7 @@ class DirectionDataset(Dataset):
         print(f"----- End Creating {len(valid_t_events)} Sequences -----")
         return (
             np.array(X, dtype=np.float32),
-            np.array(y, dtype=np.float64),
+            np.array(y, dtype=np.float32),
             pd.Index(valid_t_events),
         )
 

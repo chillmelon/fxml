@@ -17,7 +17,7 @@ class LSTMClassifier(nn.Module):
         self.linear = nn.Linear(n_hidden, output_size)
 
     def forward(self, x):
-        # self.lstm.flatten_parameters()
+        self.lstm.flatten_parameters()
         _, (hidden, _) = self.lstm(x)
         last_hidden = hidden[-1]
         logits = self.linear(last_hidden)
@@ -26,7 +26,7 @@ class LSTMClassifier(nn.Module):
 
 class LSTMClassifierModule(pl.LightningModule):
     def __init__(
-        self, n_features=1, output_size=3, n_hidden=64, n_layers=2, dropout=0.0
+        self, n_features=1, output_size=3, n_hidden=64, n_layers=2, dropout=0.0, lr=1e-3
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -39,6 +39,7 @@ class LSTMClassifierModule(pl.LightningModule):
             dropout=dropout,
         )
 
+        self.lr = lr
         self.criterion = nn.CrossEntropyLoss()
 
     def forward(self, x, labels=None):
@@ -72,6 +73,6 @@ class LSTMClassifierModule(pl.LightningModule):
         return {"loss": loss}
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
         return [optimizer], [scheduler]

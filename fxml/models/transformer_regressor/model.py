@@ -69,7 +69,7 @@ class TransformerRegressorModule(pl.LightningModule):
     def __init__(
         self,
         n_features=1,
-        output_size=3,
+        output_size=1,
         d_model=64,
         nhead=4,
         n_layers=2,

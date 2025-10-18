@@ -12,9 +12,10 @@ from lightning.pytorch.profilers import SimpleProfiler
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 
+from fxml.data.datamodules.next_bar_regr_datamodule import NextBarDataRegrModule
 from fxml.data.datamodules.return_datamodule import ReturnDataModule
 from fxml.data.datasets.next_bar_regr_dataset import NextBarRegrDataset
-from fxml.models.lstm_regressor.model import LSTMRegressorModule
+from fxml.models.gru_regressor.model import GRURegressorModule
 from fxml.utils import get_device
 
 
@@ -22,24 +23,15 @@ from fxml.utils import get_device
 def main(config: DictConfig):
     df = pd.read_pickle(config["data"]["dataset_path"])
 
-    val_split = 0.2
-
-    train_data = df.iloc[: int(len(df) * (1 - val_split))]
-    val_data = df.iloc[int(len(df) * (1 - val_split)) :]
-
-    train_dataset = NextBarRegrDataset(
-        train_data, lookback=config["data"]["sequence_length"]
+    dm = NextBarDataRegrModule(
+        data=df,
+        sequence_length=config["data"]["sequence_length"],
+        batch_size=config["training"]["batch_size"],
+        val_split=0.2,
     )
-    val_dataset = NextBarRegrDataset(
-        val_data, lookback=config["data"]["sequence_length"]
-    )
-    train_loader = DataLoader(
-        train_dataset, batch_size=config["training"]["batch_size"]
-    )
-    val_loader = DataLoader(val_dataset, batch_size=config["training"]["batch_size"])
 
-    model = LSTMRegressorModule(
-        n_features=len(config["data"]["features"]),
+    model = GRURegressorModule(
+        n_features=1,
         output_size=1,
         n_hidden=config["model"]["n_hidden"],
         n_layers=config["model"]["n_layers"],
@@ -77,7 +69,7 @@ def main(config: DictConfig):
         logger=logger,
     )
     torch.set_float32_matmul_precision("high")
-    trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    trainer.fit(model, datamodule=dm)
 
 
 if __name__ == "__main__":

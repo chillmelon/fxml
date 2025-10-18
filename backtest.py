@@ -19,14 +19,12 @@ from fxml.trading.strategies.label_test_strategy import LabelTestStrategy
 def main(config: DictConfig):
     history = pd.read_pickle(config["data"]["dataset_path"])
 
-    predictions = pd.read_pickle(
-        Path("./data/predictions")
-        / f"{config['model']['name']}_{Path(config["data"]["label_path"]).stem}.pkl"
-    )
+    predictions = pd.read_pickle(config["data"]["side_path"])
 
     history = history.join(predictions, how="left")
     history["time"] = history.index
     history.set_index("time", inplace=True)
+    print(history.head())
     history.rename(
         columns={
             "open": "Open",
@@ -46,7 +44,7 @@ def main(config: DictConfig):
         EmacrossStrategy,
         cash=10000,
         margin=0.01,
-        hedging=True,
+        hedging=False,
         exclusive_orders=False,
     )
     result = backtest.run()
@@ -54,6 +52,8 @@ def main(config: DictConfig):
     print(result)
     print(f"Buy count = {result._strategy.buy_count}")
     print(f"Sell count = {result._strategy.sell_count}")
+
+    backtest.plot()
 
 
 def log(msg):

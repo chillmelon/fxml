@@ -124,6 +124,7 @@ def add_time_features(df, timestamp_col="timestamp"):
     print(f"  ✓ Added unix_time")
 
     # Extract components
+    df["minute"] = df[timestamp_col].dt.minute
     df["hour"] = df[timestamp_col].dt.hour
     df["dow"] = df[timestamp_col].dt.dayofweek
     df["dom"] = df[timestamp_col].dt.day
@@ -131,6 +132,8 @@ def add_time_features(df, timestamp_col="timestamp"):
     print(f"  ✓ Extracted time components (hour, dow, dom, month)")
 
     # Cyclical encoding
+    df["minute_sin"] = np.sin(2 * np.pi * df["minute"] / 60)
+    df["minute_cos"] = np.cos(2 * np.pi * df["minute"] / 60)
     df["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24)
     df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)
     df["dow_sin"] = np.sin(2 * np.pi * df["dow"] / 7)

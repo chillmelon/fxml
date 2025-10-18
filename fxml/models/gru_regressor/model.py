@@ -3,11 +3,11 @@ import torch
 from torch import nn
 
 
-class LSTMRegressor(nn.Module):
+class GRURegressorModel(nn.Module):
     def __init__(self, n_features, output_size, n_hidden, n_layers, dropout):
         super().__init__()
 
-        self.lstm = nn.LSTM(
+        self.gru = nn.GRU(
             input_size=n_features,
             hidden_size=n_hidden,
             num_layers=n_layers,
@@ -17,21 +17,26 @@ class LSTMRegressor(nn.Module):
         self.linear = nn.Linear(n_hidden, output_size)
 
     def forward(self, x):
-        self.lstm.flatten_parameters()
-        _, (hidden, _) = self.lstm(x)
-        preds = self.linear(hidden[-1])
-        return preds
+        self.gru.flatten_parameters()
+        _, hidden = self.gru(x)
+        return self.linear(hidden[-1])
 
 
-class LSTMRegressorModule(pl.LightningModule):
+class GRURegressorModule(pl.LightningModule):
     def __init__(
-        self, n_features=1, output_size=1, n_hidden=64, n_layers=2, dropout=0.0, lr=1e-2
+        self,
+        n_features=1,
+        output_size=1,
+        n_hidden=64,
+        n_layers=2,
+        dropout=0.0,
+        lr=1e-2,
     ):
         super().__init__()
         self.save_hyperparameters()
-        self.lr = lr
 
-        self.model = LSTMRegressor(
+        self.lr = lr
+        self.model = GRURegressorModel(
             n_features=n_features,
             output_size=output_size,
             n_hidden=n_hidden,

@@ -1,14 +1,14 @@
 # Data parameters
 defaults:
-  - data: cusum_classifier
-  - model: lstm_classifier
+  - data: next_bar_regr
+  - model: baseline_regressor
   - _self_
 
 hydra:
   sweeper:
     params:
-      data: emacross_9_20_meta,emacross_9_36_meta
-      model: transformer_classifier,lstm_classifier
+      data: cusum_classifier
+      model: baseline_classifier,transformer_classifier,lstm_classifier
 
 # Training parameters
 training:
@@ -17,6 +17,6 @@ training:
   num_workers: 0
   val_split: 0.2
   shuffle: True
-# data:
-#   features:
-#     - close_log_fd_return
+data:
+  features:
+    - close_return
