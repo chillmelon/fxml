@@ -268,6 +268,7 @@ class BarrierMethod:
         pos = self.returns.index.searchsorted(date)
         start_date = self.returns.index[max(0, pos - offset)]
         end_date = self.returns.index[min(len(self.returns.index), pos + offset)]
+        print(start_date, end_date)
 
         # Create data to plot
         index = np.cumprod(1 + self.returns.loc[start_date:end_date])
@@ -303,13 +304,12 @@ class BarrierMethod:
         plt.title(
             f"Barrier Method for {self.returns.name} at {date.strftime('%d %b, %Y %H:%M:%S')} (label = {int(self.labels.loc[date])})"
         )
-        index.plot(ax=ax)
+        index.rename("Cumulative Return").plot(ax=ax)
         #
         text_date = self.returns.index[
             self.returns.index.searchsorted(barriers.index.max(), side="right")
         ]
         # text_date = barriers.index.max() + pd.DateOffset(minutes=5)
-        print(text_date)
         text_spacing_y = 0.01
         for col in barriers.columns:
             c = "green" if col > 0 else "red"
@@ -336,5 +336,6 @@ class BarrierMethod:
         ax.xaxis.set_major_locator(aut_locator)
         ax.xaxis.set_major_formatter(aut_formatter)
         ax.set_xlabel(None)
+        ax.legend(loc="lower left")
         plt.xlim(start_date, end_date)
         return fig

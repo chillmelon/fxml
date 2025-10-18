@@ -29,7 +29,7 @@ def main(config: DictConfig):
     model = BaselineRegressorModule(
         n_features=len(config["data"]["features"]),
         output_size=1,
-        hidden_size=config["model"]["hidden_size"],
+        n_hidden=config["model"]["hidden_size"],
         dropout=config["model"]["dropout"],
         lr=config["model"]["lr"],
     )

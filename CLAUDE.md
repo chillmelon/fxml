@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Machine learning forex trading strategy project implementing deep learning models (Transformers, LSTMs) for predicting price movements in the USD/JPY currency pair. The project follows a complete ML pipeline from data preprocessing to backtesting.
 
+## Instructions
+- DO NOT RUN ANY COMMAND
 ## Environment Setup
 
 ```bash
@@ -29,6 +31,9 @@ make requirements
 Each model type has its own training script in `fxml/models/<model_type>/train.py`:
 
 ```bash
+# Train baseline classifier (simple feedforward baseline)
+python -m fxml.models.baseline_classifier.train
+
 # Train transformer classifier (direction prediction)
 python -m fxml.models.transformer_classifier.train
 
@@ -83,6 +88,7 @@ The project is organized as a Python package under `fxml/`:
   - `datamodules/` - PyTorch Lightning DataModules
   - `preprocessing/` - Feature engineering and event filters
 - `fxml/models/` - Model architectures organized by type
+  - `baseline_classifier/` - Simple feedforward baseline for direction prediction
   - `transformer_classifier/` - Transformer for direction prediction
   - `transformer_regressor/` - Transformer for return prediction
   - `lstm_classifier/` - LSTM for direction prediction
@@ -138,6 +144,13 @@ All models use PyTorch Lightning for standardized training:
 
 ### Model Architectures
 
+**Baseline Classifier** (`fxml/models/baseline_classifier/model.py`):
+- Simple non-sequential baseline model
+- Mean pooling across time dimension (ignores temporal order)
+- Two-layer feedforward network with ReLU activation
+- Provides performance baseline to compare against sequential models
+- Useful for determining if temporal structure adds value
+
 **Transformer Models** (`fxml/models/transformer_*/model.py`):
 - Input projection layer (features → d_model)
 - Positional encoding for temporal awareness
@@ -178,6 +191,7 @@ Backtesting uses the `backtesting` library with OHLCV data joined with model pre
 ## Configuration System
 
 All training configs in `configs/`:
+- `baseline_classifier.yaml` - Baseline feedforward direction model
 - `transformer_classifier.yaml` - Transformer direction model
 - `transformer_regressor.yaml` - Transformer return model
 - `lstm_classifier.yaml` - LSTM direction model

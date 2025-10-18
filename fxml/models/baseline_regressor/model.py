@@ -17,17 +17,17 @@ class BaselineRegressor(nn.Module):
         self,
         n_features,
         output_size=1,
-        hidden_size=64,
+        n_hidden=64,
         dropout=0.1,
     ):
         super().__init__()
 
         # Simple feedforward network after mean pooling
-        self.fc1 = nn.Linear(n_features, hidden_size)
+        self.fc1 = nn.Linear(n_features, n_hidden)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
-        self.fc2 = nn.Linear(hidden_size, hidden_size // 2)
-        self.fc_out = nn.Linear(hidden_size // 2, output_size)
+        self.fc2 = nn.Linear(n_hidden, n_hidden // 2)
+        self.fc_out = nn.Linear(n_hidden // 2, output_size)
 
     def forward(self, x):
         # x: (B, T, n_features)
@@ -51,7 +51,7 @@ class BaselineRegressorModule(pl.LightningModule):
         self,
         n_features=1,
         output_size=1,
-        hidden_size=64,
+        n_hidden=64,
         dropout=0.1,
         lr=1e-3,
     ):
@@ -61,7 +61,7 @@ class BaselineRegressorModule(pl.LightningModule):
         self.model = BaselineRegressor(
             n_features=n_features,
             output_size=output_size,
-            hidden_size=hidden_size,
+            n_hidden=n_hidden,
             dropout=dropout,
         )
 

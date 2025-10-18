@@ -1,4 +1,4 @@
 name: "baseline_regressor"
-hidden_size: 64
+n_hidden: 64
 dropout: 0.3
 lr: 1e-2
