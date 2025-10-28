@@ -33,5 +33,5 @@ features:
 target:
   - close
 
-lookback: 120
+lookback: 60
 lookforward: 5

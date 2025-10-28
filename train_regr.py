@@ -8,15 +8,17 @@ from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from fxml.data.datamodules.multistep_regr_datamodule import MultiStepRegrDataModule
 from fxml.models.model import build_model
 from fxml.utils import get_device
 
 
-@hydra.main(version_base=None, config_path="./configs", config_name="ts_seq2seq")
+@hydra.main(version_base=None, config_path="./configs", config_name="tune_t2v_xfmr")
 def main(config: DictConfig):
+    print(OmegaConf.to_yaml(config))
+    return
     train_data = pd.read_pickle(config["data"]["train_path"])
     test_data = pd.read_pickle(config["data"]["test_path"])
 
