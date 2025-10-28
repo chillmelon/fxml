@@ -35,7 +35,7 @@ def main(config: DictConfig):
     model = build_model(config["model"]["name"], config)
     logger = TensorBoardLogger(
         "lightning_logs",
-        name=f"{config['model']['name']}_{Path(config["data"]["label_path"]).stem}",
+        name=f"{config['model']['name']}_{Path(config["data"]["dataset_path"]).stem}",
     )
 
     profiler = SimpleProfiler(filename="profiler")

@@ -4,5 +4,5 @@ nhead: 4
 n_layers: 2
 dim_feedforward: 256
 dropout: 0.2
-pool: "mean"
-lr: 1e-3
+pool: "last"
+lr: 1e-2

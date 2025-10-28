@@ -1,9 +1,12 @@
-import lightning as pl
 import torch
 from torch import nn
 
+from fxml.models.base_regressor import BaseRegressorModule
+
 
 class GRURegressorModel(nn.Module):
+    """GRU-based regressor for sequential data."""
+
     def __init__(self, n_features, output_size, n_hidden, n_layers, dropout):
         super().__init__()
 
@@ -22,7 +25,9 @@ class GRURegressorModel(nn.Module):
         return self.linear(hidden[-1])
 
 
-class GRURegressorModule(pl.LightningModule):
+class GRURegressorModule(BaseRegressorModule):
+    """GRU regressor Lightning module."""
+
     def __init__(
         self,
         n_features=1,
@@ -31,11 +36,38 @@ class GRURegressorModule(pl.LightningModule):
         n_layers=2,
         dropout=0.0,
         lr=1e-2,
+        optimizer_type="Adam",
+        weight_decay=0.0,
+        scheduler_step_size=10,
+        scheduler_gamma=0.1,
+        enable_plotting=True,
     ):
-        super().__init__()
+        """Initialize GRU regressor module.
+
+        Args:
+            n_features: Number of input features
+            output_size: Number of output dimensions
+            n_hidden: GRU hidden size
+            n_layers: Number of GRU layers
+            dropout: Dropout probability (applied between GRU layers)
+            lr: Learning rate
+            optimizer_type: Type of optimizer ("Adam" or "AdamW")
+            weight_decay: Weight decay for regularization
+            scheduler_step_size: Step size for learning rate scheduler
+            scheduler_gamma: Multiplicative factor for learning rate decay
+            enable_plotting: Whether to enable validation plotting
+        """
+        super().__init__(
+            lr=lr,
+            optimizer_type=optimizer_type,
+            weight_decay=weight_decay,
+            scheduler_step_size=scheduler_step_size,
+            scheduler_gamma=scheduler_gamma,
+            enable_plotting=enable_plotting,
+        )
         self.save_hyperparameters()
 
-        self.lr = lr
+        # Build model
         self.model = GRURegressorModel(
             n_features=n_features,
             output_size=output_size,
@@ -43,39 +75,3 @@ class GRURegressorModule(pl.LightningModule):
             n_layers=n_layers,
             dropout=dropout,
         )
-
-        self.criterion = nn.MSELoss()
-
-    def forward(self, x, labels=None):
-        pred = self.model(x)
-        loss = 0
-        if labels is not None:
-            labels = labels.view(-1, 1)
-            loss = self.criterion(pred, labels)
-        return loss, pred
-
-    def training_step(self, batch, batch_idx):
-        x, y, _ = batch
-        loss, out = self(x, y)
-
-        self.log("train_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
-
-    def validation_step(self, batch, batch_idx):
-        x, y, _ = batch
-        loss, out = self(x, y)
-
-        self.log("val_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
-
-    def test_step(self, batch, batch_idx):
-        x, y, _ = batch
-        loss, out = self(x, y)
-
-        self.log("test_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-        return [optimizer], [scheduler]

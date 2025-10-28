@@ -3,13 +3,14 @@ import mplfinance as mpf
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
+from tqdm import tqdm
 
 from fxml.trading.strategies.trendline_breakout.trendline_automation import (
     fit_trendlines_single,
 )
 
 
-def trendline_breakout(close: np.array, lookback: int):
+def trendline_breakout(close: np.ndarray, lookback: int):
     s_tl = np.zeros(len(close))
     s_tl[:] = np.nan
 
@@ -41,13 +42,33 @@ def trendline_breakout(close: np.array, lookback: int):
     return s_tl, r_tl, sig
 
 
+def optimize_trendline(data):
+    lookbacks = list(range(4, 180, 2))
+
+    best_pf = 0.0
+    best_lookback = -1
+    r = np.log(data["close"]).diff().shift(-1)
+
+    for lookback in tqdm(lookbacks, position=1):
+        _, _, signal = trendline_breakout(data["close"].to_numpy(), lookback)
+
+        sig_rets = signal * r
+
+        sig_pf = sig_rets[sig_rets > 0].sum() / sig_rets[sig_rets < 0].abs().sum()
+        if sig_pf > best_pf:
+            best_pf = sig_pf
+            best_lookback = lookback
+
+    return best_lookback, best_pf
+
+
 def main():
     data = pd.read_pickle("data/resampled/EURUSD-60m-20240101-20241231.pkl")
     data["timestamp"] = data["timestamp"].astype("datetime64[s]")
     data = data.set_index("timestamp")
     data = data.dropna()
 
-    lookback = 72
+    lookback, _ = optimize_trendline(data)
     support, resist, signal = trendline_breakout(data["close"].to_numpy(), lookback)
     data["support"] = support
     data["resist"] = resist
@@ -68,31 +89,6 @@ def main():
     strat_r.cumsum().plot()
     plt.ylabel("Cumulative Log Return")
     plt.show()
-
-    ## Parameter Sweep
-    lookbacks = list(range(24, 169, 2))
-    pfs = []
-
-    lookback_returns = pd.DataFrame()
-    for lookback in lookbacks:
-        support, resist, signal = trendline_breakout(data["close"].to_numpy(), lookback)
-        data["signal"] = signal
-
-        data["r"] = np.log(data["close"]).diff().shift(-1)
-        strat_r = data["signal"] * data["r"]
-
-        pf = strat_r[strat_r > 0].sum() / strat_r[strat_r < 0].abs().sum()
-        print("Profit Factor", lookback, pf)
-        pfs.append(pf)
-
-        lookback_returns[lookback] = strat_r
-
-    plt.style.use("dark_background")
-    x = pd.Series(pfs, index=lookbacks)
-    x.plot()
-    plt.ylabel("Profit Factor")
-    plt.xlabel("Trendline Lookback")
-    plt.axhline(1.0, color="white")
 
 
 if __name__ == "__main__":

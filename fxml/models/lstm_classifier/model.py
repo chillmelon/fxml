@@ -46,7 +46,7 @@ class LSTMClassifierModule(pl.LightningModule):
         return self.model(x)  # logits
 
     def training_step(self, batch, batch_idx):
-        x, y, _ = batch
+        x, y = batch
         y = y.squeeze().long()
         logits = self(x)
         loss = self.criterion(logits, y)
@@ -55,7 +55,7 @@ class LSTMClassifierModule(pl.LightningModule):
         return {"loss": loss}
 
     def validation_step(self, batch, batch_idx):
-        x, y, _ = batch
+        x, y = batch
         y = y.squeeze().long()
         logits = self(x)
         loss = self.criterion(logits, y)
@@ -64,7 +64,7 @@ class LSTMClassifierModule(pl.LightningModule):
         return {"loss": loss}
 
     def test_step(self, batch, batch_idx):
-        x, y, _ = batch
+        x, y = batch
         y = y.squeeze().long()
         logits = self(x)
         loss = self.criterion(logits, y)

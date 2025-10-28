@@ -10,33 +10,38 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
 from omegaconf import DictConfig
 
-from fxml.data.datamodules.next_bar_regr_datamodule import NextBarDataRegrModule
-from fxml.data.datamodules.return_datamodule import ReturnDataModule
-from fxml.models.baseline_regressor.model import BaselineRegressorModule
+from fxml.data.datamodules.clf_datamodule import ClassificationDataModule
+from fxml.models.model import build_model
 from fxml.utils import get_device
 
 
-@hydra.main(version_base=None, config_path="../../../configs", config_name="config")
+@hydra.main(
+    version_base=None, config_path="./configs", config_name="t2v_transformer_clf"
+)
 def main(config: DictConfig):
     df = pd.read_pickle(config["data"]["dataset_path"])
-    dm = NextBarDataRegrModule(
-        data=df,
-        sequence_length=config["data"]["sequence_length"],
+    print(df.columns)
+    df["class"] = df["label"].apply(lambda x: int(x + 1))
+    print(df["class"].value_counts())
+    train_data = df[df.index.year < 2024]
+    test_data = df[df.index.year >= 2024]
+
+    dm = ClassificationDataModule(
+        train_data,
+        test_data,
+        feature_cols=config["data"]["time_features"] + config["data"]["features"],
+        target_col="class",
+        lookback=config["data"]["lookback"],
+        stride=config["data"]["stride"],
         batch_size=config["training"]["batch_size"],
-        val_split=0.2,
+        num_workers=config["training"]["num_workers"],
+        val_split=0.5,
     )
 
-    model = BaselineRegressorModule(
-        n_features=len(config["data"]["features"]),
-        output_size=1,
-        n_hidden=config["model"]["hidden_size"],
-        dropout=config["model"]["dropout"],
-        lr=config["model"]["lr"],
-    )
-
+    model = build_model(config["model"]["name"], config)
     logger = TensorBoardLogger(
         "lightning_logs",
-        name=f"{config['model']['name']}_{Path(config['data']['dataset_path']).stem}",
+        name=f"{config['model']['name']}_{Path(config["data"]["dataset_path"]).stem}",
     )
 
     profiler = SimpleProfiler(filename="profiler")
@@ -65,6 +70,18 @@ def main(config: DictConfig):
     )
     torch.set_float32_matmul_precision("high")
     trainer.fit(model, datamodule=dm)
+
+    last_model_path = checkpoint_callback.last_model_path
+    best_model_path = checkpoint_callback.best_model_path
+    _use_model_path = last_model_path if best_model_path == "" else best_model_path
+    print("use checkpoint:", _use_model_path)
+
+    # run_test
+    trainer.test(
+        model=model if _use_model_path == "" else None,
+        datamodule=dm,
+        ckpt_path=_use_model_path,
+    )
 
 
 if __name__ == "__main__":

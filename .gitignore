@@ -178,3 +178,4 @@ data/
 outputs/
 lightning_logs/
 .DS_Store
+multirun/

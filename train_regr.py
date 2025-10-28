@@ -3,45 +3,38 @@ from pathlib import Path
 import hydra
 import pandas as pd
 import torch
-import yaml
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
 from omegaconf import DictConfig
-from torch.utils.data import DataLoader
 
-from fxml.data.datamodules.next_bar_regr_datamodule import NextBarDataRegrModule
-from fxml.data.datamodules.return_datamodule import ReturnDataModule
-from fxml.data.datasets.next_bar_regr_dataset import NextBarRegrDataset
-from fxml.models.gru_regressor.model import GRURegressorModule
+from fxml.data.datamodules.multistep_regr_datamodule import MultiStepRegrDataModule
+from fxml.models.model import build_model
 from fxml.utils import get_device
 
 
-@hydra.main(version_base=None, config_path="../../../configs", config_name="config")
+@hydra.main(version_base=None, config_path="./configs", config_name="ts_seq2seq")
 def main(config: DictConfig):
-    df = pd.read_pickle(config["data"]["dataset_path"])
+    train_data = pd.read_pickle(config["data"]["train_path"])
+    test_data = pd.read_pickle(config["data"]["test_path"])
 
-    dm = NextBarDataRegrModule(
-        data=df,
-        sequence_length=config["data"]["sequence_length"],
+    dm = MultiStepRegrDataModule(
+        train_data,
+        test_data,
+        feature_cols=config["data"]["time_features"] + config["data"]["features"],
+        target_col=config["data"]["target"],
+        lookback=config["data"]["lookback"],
+        lookforward=config["data"]["lookforward"],
+        val_split=config["training"]["val_split"],
         batch_size=config["training"]["batch_size"],
-        val_split=0.2,
     )
 
-    model = GRURegressorModule(
-        n_features=1,
-        output_size=1,
-        n_hidden=config["model"]["n_hidden"],
-        n_layers=config["model"]["n_layers"],
-        dropout=config["model"]["dropout"],
-        lr=config["model"]["lr"],
-    )
-
+    model = build_model(config["model"]["name"], config)
     logger = TensorBoardLogger(
         "lightning_logs",
-        name=f"{config['model']['name']}_{Path(config["data"]["dataset_path"]).stem}",
+        name=f"{config['model']['name']}_{Path(config["data"]["train_path"]).stem}",
     )
 
     profiler = SimpleProfiler(filename="profiler")
@@ -70,6 +63,18 @@ def main(config: DictConfig):
     )
     torch.set_float32_matmul_precision("high")
     trainer.fit(model, datamodule=dm)
+
+    last_model_path = checkpoint_callback.last_model_path
+    best_model_path = checkpoint_callback.best_model_path
+    _use_model_path = last_model_path if best_model_path == "" else best_model_path
+    print("use checkpoint:", _use_model_path)
+
+    # run_test
+    trainer.test(
+        model=model if _use_model_path == "" else None,
+        datamodule=dm,
+        ckpt_path=_use_model_path,
+    )
 
 
 if __name__ == "__main__":

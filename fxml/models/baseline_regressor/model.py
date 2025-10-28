@@ -1,6 +1,7 @@
-import lightning as pl
 import torch
 from torch import nn
+
+from fxml.models.base_regressor import BaseRegressorModule
 
 
 class BaselineRegressor(nn.Module):
@@ -46,7 +47,12 @@ class BaselineRegressor(nn.Module):
         return preds
 
 
-class BaselineRegressorModule(pl.LightningModule):
+class BaselineRegressorModule(BaseRegressorModule):
+    """Baseline regressor Lightning module.
+
+    Uses mean pooling + feedforward network for regression.
+    """
+
     def __init__(
         self,
         n_features=1,
@@ -54,50 +60,40 @@ class BaselineRegressorModule(pl.LightningModule):
         n_hidden=64,
         dropout=0.1,
         lr=1e-3,
+        optimizer_type="AdamW",
+        weight_decay=1e-4,
+        scheduler_step_size=10,
+        scheduler_gamma=0.5,
+        enable_plotting=True,
     ):
-        super().__init__()
+        """Initialize baseline regressor module.
+
+        Args:
+            n_features: Number of input features
+            output_size: Number of output dimensions
+            n_hidden: Hidden layer size
+            dropout: Dropout probability
+            lr: Learning rate
+            optimizer_type: Type of optimizer ("Adam" or "AdamW")
+            weight_decay: Weight decay for regularization
+            scheduler_step_size: Step size for learning rate scheduler
+            scheduler_gamma: Multiplicative factor for learning rate decay
+            enable_plotting: Whether to enable validation plotting
+        """
+        super().__init__(
+            lr=lr,
+            optimizer_type=optimizer_type,
+            weight_decay=weight_decay,
+            scheduler_step_size=scheduler_step_size,
+            scheduler_gamma=scheduler_gamma,
+            enable_plotting=enable_plotting,
+        )
         self.save_hyperparameters()
 
+        # Build model
         self.model = BaselineRegressor(
             n_features=n_features,
             output_size=output_size,
             n_hidden=n_hidden,
             dropout=dropout,
         )
-
-        self.criterion = nn.MSELoss()
-        self.lr = lr
-
-    def forward(self, x, labels=None):
-        pred = self.model(x)
-        loss = 0
-        if labels is not None:
-            labels = labels.view(-1, 1)
-            loss = self.criterion(pred, labels)
-        return loss, pred
-
-    def training_step(self, batch, batch_idx):
-        x, y, _ = batch
-        loss, out = self(x, y)
-
-        self.log("train_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
-
-    def validation_step(self, batch, batch_idx):
-        x, y, _ = batch
-        loss, out = self(x, y)
-
-        self.log("val_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
-
-    def test_step(self, batch, batch_idx):
-        x, y, _ = batch
-        loss, out = self(x, y)
-
-        self.log("test_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
-
-    def configure_optimizers(self):
-        opt = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-4)
-        sched = torch.optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.5)
-        return [opt], [sched]

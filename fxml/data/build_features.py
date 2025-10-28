@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import hydra
+import numpy as np
 import pandas as pd
 from omegaconf import DictConfig
 
@@ -9,38 +10,46 @@ from fxml.data.preprocessing.features import (
     add_technical_indicators,
     add_time_features,
 )
-from fxml.utils import load_config
 
 
-@hydra.main(
-    version_base=None, config_path="../../configs/preprocessing", config_name="features"
-)
+@hydra.main(version_base=None, config_path="../../configs", config_name="preprocessing")
 def main(config: DictConfig):
-    resampled_path = config.get("data", {}).get("resampled", {})
-    resampled_name = Path(resampled_path).stem
+    symbol = config.get("symbol", {}).get("symbol", "USDJPY")
+    minutes = config.get("minutes", [5])
+    date_ranges = config.get("date", [])
 
-    df = pd.read_pickle(resampled_path)
+    for date_range in date_ranges:
+        date_from = str(date_range.get("from", None))
+        date_to = str(date_range.get("to", None))
+        for minute in minutes:
+            RESAMPLED_NAME = f"{symbol}-{minute}m-{date_from}-{date_to}"
 
-    # add returns
-    return_config = config.get("features", {}).get("returns", {})
-    df = add_returns(df, config=return_config)
+            resampled_path = f"data/resampled/{RESAMPLED_NAME}.pkl"
 
-    # add TA
-    ta_config = config.get("features", {}).get("technical_indicators", {})
-    df = add_technical_indicators(df, config=ta_config)
+            df = pd.read_pickle(resampled_path)
+            df.reset_index(inplace=True)
 
-    # add time features
-    df = add_time_features(df)
+            df["log_volume"] = np.log1p(df["volume"])
+            # add returns
+            return_config = config.get("features", {}).get("returns", {})
+            df = add_returns(df, config=return_config)
 
-    # drop NaN
-    df.dropna(inplace=True)
+            # add TA
+            ta_config = config.get("features", {}).get("technical_indicators", {})
+            df = add_technical_indicators(df, config=ta_config)
 
-    # set timestamp index
-    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
-    df = df.set_index("timestamp")
+            # add time features
+            df = add_time_features(df)
 
-    # save file
-    df.to_pickle(f"data/processed/{resampled_name}_FEATURES.pkl")
+            # drop NaN
+            df.dropna(inplace=True)
+
+            # set timestamp index
+            df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+            df = df.set_index("timestamp")
+
+            # save file
+            df.to_pickle(f"data/processed/{RESAMPLED_NAME}_FEATURES.pkl")
 
     return
 

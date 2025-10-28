@@ -4,31 +4,12 @@ import pandas as pd
 import pandas_ta as ta
 
 
-def calculate_macd(
-    close: np.array,
+def macd(
+    close: np.ndarray,
     fast_period: int = 12,
     slow_period: int = 26,
     signal_period: int = 9,
 ):
-    """
-    Calculate MACD indicator components.
-
-    Parameters
-    ----------
-    close : np.array
-        Close price array
-    fast_period : int
-        Fast EMA period (default 12)
-    slow_period : int
-        Slow EMA period (default 26)
-    signal_period : int
-        Signal line EMA period (default 9)
-
-    Returns
-    -------
-    tuple
-        (macd_line, signal_line, histogram)
-    """
     # Convert to pandas Series for pandas_ta
     close_series = pd.Series(close)
 
@@ -47,39 +28,6 @@ def calculate_macd(
     return macd_line, signal_line, histogram
 
 
-def detect_crossover(macd_line: np.array, signal_line: np.array):
-    """
-    Detect MACD crossover signals.
-
-    Parameters
-    ----------
-    macd_line : np.array
-        MACD line values
-    signal_line : np.array
-        Signal line values
-
-    Returns
-    -------
-    np.array
-        Crossover signals: 1.0 for bullish cross, -1.0 for bearish cross, 0.0 for no cross
-    """
-    crossover = np.zeros(len(macd_line))
-
-    for i in range(1, len(macd_line)):
-        # Skip if NaN values
-        if np.isnan(macd_line[i]) or np.isnan(signal_line[i]):
-            continue
-
-        # Bullish crossover: MACD crosses above signal
-        if macd_line[i - 1] <= signal_line[i - 1] and macd_line[i] > signal_line[i]:
-            crossover[i] = 1.0
-        # Bearish crossover: MACD crosses below signal
-        elif macd_line[i - 1] >= signal_line[i - 1] and macd_line[i] < signal_line[i]:
-            crossover[i] = -1.0
-
-    return crossover
-
-
 if __name__ == "__main__":
     # Load data
     data = pd.read_pickle("data/resampled/EURUSD-60m-20240101-20241231.pkl")
@@ -88,17 +36,13 @@ if __name__ == "__main__":
     data = data.dropna()
 
     # Calculate MACD
-    macd_line, signal_line, histogram = calculate_macd(
+    macd_line, signal_line, histogram = macd(
         data["close"].to_numpy(), fast_period=12, slow_period=26, signal_period=9
     )
 
     data["macd"] = macd_line
     data["signal"] = signal_line
     data["histogram"] = histogram
-
-    # Detect crossovers
-    crossover = detect_crossover(macd_line, signal_line)
-    data["crossover"] = crossover
 
     # Visualize
     plt.style.use("dark_background")
@@ -123,9 +67,3 @@ if __name__ == "__main__":
 
     plt.tight_layout()
     plt.show()
-
-    # Print crossover statistics
-    bullish_crosses = (crossover == 1.0).sum()
-    bearish_crosses = (crossover == -1.0).sum()
-    print(f"Bullish Crossovers: {bullish_crosses}")
-    print(f"Bearish Crossovers: {bearish_crosses}")

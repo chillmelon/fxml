@@ -1,7 +1,9 @@
 import lightning as pl
+import seaborn as sns
 import torch
+from matplotlib import pyplot as plt
 from torch import nn
-from torchmetrics.classification import MulticlassAccuracy
+from torchmetrics.classification import ConfusionMatrix, MulticlassAccuracy
 
 
 class BaselineClassifier(nn.Module):
@@ -18,17 +20,17 @@ class BaselineClassifier(nn.Module):
         self,
         n_features,
         output_size,
-        hidden_size=64,
+        n_hidden=64,
         dropout=0.1,
     ):
         super().__init__()
 
         # Simple feedforward network after mean pooling
-        self.fc1 = nn.Linear(n_features, hidden_size)
+        self.fc1 = nn.Linear(n_features, n_hidden)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
-        self.fc2 = nn.Linear(hidden_size, hidden_size // 2)
-        self.fc_out = nn.Linear(hidden_size // 2, output_size)
+        self.fc2 = nn.Linear(n_hidden, n_hidden // 2)
+        self.fc_out = nn.Linear(n_hidden // 2, output_size)
 
     def forward(self, x):
         # x: (B, T, n_features)
@@ -52,57 +54,91 @@ class BaselineClassifierModule(pl.LightningModule):
         self,
         n_features=1,
         output_size=3,
-        hidden_size=64,
+        n_hidden=64,
         dropout=0.1,
         label_smoothing=0.0,
         lr=1e-3,
     ):
         super().__init__()
         self.save_hyperparameters()
+        self.output_size = output_size
 
         self.model = BaselineClassifier(
             n_features=n_features,
             output_size=output_size,
-            hidden_size=hidden_size,
+            n_hidden=n_hidden,
             dropout=dropout,
         )
 
+        self.val_preds = []
+        self.val_labels = []
+
         self.criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
-        self.train_acc = MulticlassAccuracy(num_classes=output_size)
         self.val_acc = MulticlassAccuracy(num_classes=output_size)
+        self.test_acc = MulticlassAccuracy(num_classes=output_size)
         self.lr = lr
 
     def forward(self, x):
         return self.model(x)  # logits
 
-    def _step(self, batch, stage):
-        x, y, _ = batch
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        y = y.squeeze().long()
+        logits = self(x)
+        loss = self.criterion(logits, y)
+        self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
         y = y.squeeze().long()
         logits = self(x)
         loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
+        acc = self.val_acc(preds, y)
+        self.log("val_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
+        self.log("val_acc", acc, prog_bar=True, on_step=False, on_epoch=True)
 
-        if stage == "train":
-            acc = self.train_acc(preds, y)
-            self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-            self.log("train_acc", acc, prog_bar=True, on_step=False, on_epoch=True)
-        elif stage == "val":
-            acc = self.val_acc(preds, y)
-            self.log("val_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-            self.log("val_acc", acc, prog_bar=True, on_step=False, on_epoch=True)
-        else:
-            self.log("test_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-
+        # Store predictions and labels for confusion matrix
+        self.val_preds.append(preds)
+        self.val_labels.append(y)
         return loss
 
-    def training_step(self, batch, batch_idx):
-        return self._step(batch, "train")
+    def on_validation_epoch_end(self):
+        val_preds = torch.cat(self.val_preds)
+        val_labels = torch.cat(self.val_labels)
 
-    def validation_step(self, batch, batch_idx):
-        return self._step(batch, "val")
+        conf_mat = ConfusionMatrix(task="multiclass", num_classes=self.output_size)
+        # Compute confusion matrix
+        cm = conf_mat(val_preds.cpu(), val_labels.cpu())
+
+        # Plot confusion matrix
+        self.plot_confusion_matrix(cm)
+
+        # Clear stored predictions and labels for the next epoch
+        self.val_preds.clear()
+        self.val_labels.clear()
 
     def test_step(self, batch, batch_idx):
-        return self._step(batch, "test")
+        x, y = batch
+        y = y.squeeze().long()
+        logits = self(x)
+        loss = self.criterion(logits, y)
+        preds = torch.argmax(logits, dim=1)
+        acc = self.test_acc(preds, y)
+        self.log("test_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
+        self.log("test_acc", acc, prog_bar=True, on_step=False, on_epoch=True)
+
+    def plot_confusion_matrix(self, cm):
+        fig, ax = plt.subplots(figsize=(10, 8))
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
+        ax.set_xlabel("Predicted labels")
+        ax.set_ylabel("True labels")
+        ax.set_title("Confusion Matrix")
+
+        # Log confusion matrix to TensorBoard
+        self.logger.experiment.add_figure("Confusion Matrix", fig, self.current_epoch)
+        plt.close(fig)
 
     def configure_optimizers(self):
         opt = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-4)

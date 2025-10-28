@@ -75,20 +75,21 @@ def get_side_from_model_batch(
 def main(config: DictConfig):
 
     models_dir = Path(
-        f"./lightning_logs/{config['model']['name']}_{Path(config["data"]["label_path"]).stem}"
+        f"./lightning_logs/{config['model']['name']}_{Path(config["data"]["dataset_path"]).stem}"
     )
 
     version_list = sorted(os.listdir(models_dir))
 
-    print(version_list)
+    print(version_list[-1])
     checkpoint_path = (
         models_dir / version_list[-1] / "checkpoints" / "best_checkpoint.ckpt"
     )
 
     df = pd.read_pickle(config["data"]["dataset_path"])
     label = pd.read_pickle(config["data"]["label_path"])
+    time_features = config["data"]["time_features"]
     features = config["data"]["features"]
-    features_df = df[features]
+    features_df = df[time_features + features]
 
     model = build_model(config["model"]["name"], config).__class__
     model = model.load_from_checkpoint(checkpoint_path)
@@ -113,7 +114,7 @@ def main(config: DictConfig):
 
     predictions_path = (
         Path("./data/predictions")
-        / f"{config['model']['name']}_{Path(config["data"]["label_path"]).stem}.pkl"
+        / f"{config['model']['name']}_{Path(config["data"]["dataset_path"]).stem}.pkl"
     )
 
     label.to_pickle(predictions_path)

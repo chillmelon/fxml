@@ -11,6 +11,7 @@ from lightning.pytorch.profilers import SimpleProfiler
 from omegaconf import DictConfig
 
 from fxml.data.datamodules.event_based_datamodule import EventBasedDataModule
+from fxml.data.datamodules.next_bar_clf_datamodule import NextBarClfDataModule
 from fxml.models.baseline_classifier.model import BaselineClassifierModule
 from fxml.utils import get_device
 
@@ -18,31 +19,26 @@ from fxml.utils import get_device
 @hydra.main(version_base=None, config_path="../../../configs", config_name="config")
 def main(config: DictConfig):
     df = pd.read_pickle(config["data"]["dataset_path"])
-    label = pd.read_pickle(config["data"]["label_path"])
 
-    dm = EventBasedDataModule(
+    dm = NextBarClfDataModule(
         data=df,
-        labels=label,
         sequence_length=config["data"]["sequence_length"],
-        features=config["data"]["features"],
-        target=config["data"]["target"],
         batch_size=config["training"]["batch_size"],
         num_workers=config["training"]["num_workers"],
         val_split=config["training"]["val_split"],
-        shuffle=config["training"]["shuffle"],
     )
 
     model = BaselineClassifierModule(
         n_features=len(config["data"]["features"]),
-        output_size=3,
-        hidden_size=config["model"]["hidden_size"],
+        output_size=config["data"]["n_classes"],
+        n_hidden=config["model"]["hidden_size"],
         dropout=config["model"]["dropout"],
         lr=config["model"]["lr"],
     )
 
     logger = TensorBoardLogger(
         "lightning_logs",
-        name=f"{config['model']['name']}_{Path(config['data']['label_path']).stem}",
+        name=f"{config['model']['name']}_{Path(config['data']['dataset_path']).stem}",
     )
 
     profiler = SimpleProfiler(filename="profiler")

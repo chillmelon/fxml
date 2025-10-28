@@ -68,6 +68,7 @@ def add_technical_indicators(df, config={}):
     ema_windows = config.get("ema_windows", [5, 20])
     for window in ema_windows:
         df.ta.ema(length=window, append=True)
+        df[f"EMA_{window}_slope"] = df[f"EMA_{window}"].diff().fillna(0)
     print(f"  ✓ EMA features for windows: {ema_windows}")
 
     # ATR

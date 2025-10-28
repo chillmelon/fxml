@@ -57,30 +57,30 @@ def create_time_bar(df, minutes: int):
     print(f"Resampling to {minutes}-minute bars...")
 
     df = df[["timestamp", "askPrice", "bidPrice", "askVolume", "bidVolume"]].copy()
+
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
-    df["mid"] = (df["askPrice"] + df["bidPrice"]) / 2
-    # Volume is in millions, convert to actual volume
-    df["volume"] = (df["askVolume"] + df["bidVolume"]) * 1_000_000
+    df.set_index("timestamp", inplace=True)
+
+    # Calculate features
+    df["price"] = (df["askPrice"] + df["bidPrice"]) / 2
+    df["volume"] = df["askVolume"] + df["bidVolume"]
     df["spread"] = df["askPrice"] - df["bidPrice"]
 
-    df.set_index("timestamp", inplace=True)
-    df = df[["mid", "volume", "spread"]]
+    # Resample into time bars
+    freq = f"{minutes}min"
+    resampled = df["price"].resample(freq).ohlc()
+    resampled["volume"] = df["volume"].resample(freq).sum()
+    resampled["spread"] = df["spread"].resample(freq).mean()
+    resampled["tick"] = df["price"].resample(freq).count()
 
-    ohlcv = df.resample(f"{minutes}min").agg(
-        {"mid": ["first", "max", "min", "last"], "volume": "sum", "spread": "mean"}
-    )
+    resampled.dropna(subset=["open"], inplace=True)
 
-    ohlcv.columns = ["open", "high", "low", "close", "volume", "spread"]
-    ohlcv = ohlcv.dropna(subset=["open"])
-    ohlcv.reset_index(inplace=True)
-
-    print(f"Resampled data shape: {ohlcv.shape}")
-    return ohlcv
+    print(f"Resampled data shape: {resampled.shape}")
+    return resampled
 
 
-@hydra.main(version_base=None, config_path="../../configs", config_name="resampling")
+@hydra.main(version_base=None, config_path="../../configs", config_name="preprocessing")
 def main(config: DictConfig):
-    print(OmegaConf.to_yaml(config))
     print("=" * 60)
     print("FOREX DATA RESAMPLING PIPELINE")
     print("=" * 60)

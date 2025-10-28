@@ -1,10 +1,12 @@
-import lightning as pl
 import torch
-import torch.nn.functional as F
 from torch import nn
+
+from fxml.models.base_regressor import BaseRegressorModule
 
 
 class TransformerRegressor(nn.Module):
+    """Transformer-based regressor with CLS token for sequence pooling."""
+
     def __init__(
         self,
         n_features,
@@ -20,6 +22,7 @@ class TransformerRegressor(nn.Module):
         self.pool = pool
         self.input_proj = nn.Linear(n_features, d_model)
         self.positional_encoding = PositionalEncoding(d_model, dropout)
+        self.cls = nn.Parameter(torch.zeros(1, 1, d_model))
 
         enc_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
@@ -31,20 +34,20 @@ class TransformerRegressor(nn.Module):
         self.encoder = nn.TransformerEncoder(enc_layer, num_layers=num_layers)
         self.fc_out = nn.Linear(d_model, output_size)
 
-    def forward(self, x):
-        # x: (B, T, n_features)
+    def forward(self, x):  # x: (B, T, F)
         x = self.input_proj(x)
+        B = x.size(0)
+        cls = self.cls.expand(B, 1, -1)  # (B,1,D)
+        x = torch.cat([cls, x], dim=1)  # prepend CLS
         x = self.positional_encoding(x)
-        x = self.encoder(x)  # (B, T, d_model)
-        if self.pool == "mean":
-            x = x.mean(dim=1)
-        else:
-            x = x[:, -1, :]
-        logits = self.fc_out(x)  # (B, C)
-        return logits
+        x = self.encoder(x)
+        cls_state = x[:, 0]  # (B,D)
+        return self.fc_out(cls_state)
 
 
 class PositionalEncoding(nn.Module):
+    """Sinusoidal positional encoding for Transformer models."""
+
     def __init__(self, d_model, dropout=0.1, max_len=8192):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
@@ -65,7 +68,9 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x + self.pe[:, : x.size(1), :])
 
 
-class TransformerRegressorModule(pl.LightningModule):
+class TransformerRegressorModule(BaseRegressorModule):
+    """Transformer regressor Lightning module."""
+
     def __init__(
         self,
         n_features=1,
@@ -75,11 +80,45 @@ class TransformerRegressorModule(pl.LightningModule):
         n_layers=2,
         dim_feedforward=128,
         dropout=0.1,
-        label_smoothing=0.0,
+        label_smoothing=0.0,  # Kept for backward compatibility (unused)
         pool="mean",
+        lr=3e-4,
+        optimizer_type="Adam",
+        weight_decay=1e-4,
+        scheduler_step_size=10,
+        scheduler_gamma=0.5,
+        enable_plotting=True,
     ):
-        super().__init__()
+        """Initialize Transformer regressor module.
+
+        Args:
+            n_features: Number of input features
+            output_size: Number of output dimensions
+            d_model: Transformer model dimension
+            nhead: Number of attention heads
+            n_layers: Number of transformer encoder layers
+            dim_feedforward: Dimension of feedforward network
+            dropout: Dropout probability
+            label_smoothing: Kept for backward compatibility (unused)
+            pool: Pooling strategy ("last" or "mean")
+            lr: Learning rate
+            optimizer_type: Type of optimizer ("Adam" or "AdamW")
+            weight_decay: Weight decay for regularization
+            scheduler_step_size: Step size for learning rate scheduler
+            scheduler_gamma: Multiplicative factor for learning rate decay
+            enable_plotting: Whether to enable validation plotting
+        """
+        super().__init__(
+            lr=lr,
+            optimizer_type=optimizer_type,
+            weight_decay=weight_decay,
+            scheduler_step_size=scheduler_step_size,
+            scheduler_gamma=scheduler_gamma,
+            enable_plotting=enable_plotting,
+        )
         self.save_hyperparameters()
+
+        # Build model
         self.model = TransformerRegressor(
             n_features=n_features,
             output_size=output_size,
@@ -90,35 +129,3 @@ class TransformerRegressorModule(pl.LightningModule):
             dropout=dropout,
             pool=pool,
         )
-
-        self.label_smoothing = label_smoothing
-        self.criterion = nn.MSELoss()
-
-    def forward(self, x):
-        return self.model(x)  # logits
-
-    def _step(self, batch, stage):
-        x, y, _ = batch
-        preds = self(x)
-        loss = self.criterion(preds, y)
-        if stage == "train":
-            self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-        elif stage == "val":
-            self.log("val_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-        else:
-            self.log("test_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-        return loss
-
-    def training_step(self, batch, batch_idx):
-        return self._step(batch, "train")
-
-    def validation_step(self, batch, batch_idx):
-        return self._step(batch, "val")
-
-    def test_step(self, batch, batch_idx):
-        return self._step(batch, "test")
-
-    def configure_optimizers(self):
-        opt = torch.optim.Adam(self.parameters(), lr=3e-4, weight_decay=1e-4)
-        sched = torch.optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.5)
-        return [opt], [sched]
