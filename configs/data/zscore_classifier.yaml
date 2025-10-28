@@ -1,0 +1,35 @@
+dataset_path: data/processed/USDJPY-5m-20240101-20241231_FEATURES.pkl
+label_path: data/labels/direction_labels/USDJPY-5m-20240101-20241231-Z_SCORE_W100_2Z-TB.pkl
+features:
+  - close
+  - spread
+  # Returns
+  - close_log_return
+  - close_fd_return
+  # Trend
+  - EMA_5
+  - EMA_50
+  # Volatility
+  - ATRr_60
+  # Momentum / Strength
+  - RSI_14
+  - ADX_14
+  - DMP_14
+  - DMN_14
+  # Bollinger band position (multi-scale)
+  - BBP_5_2.0_2.0
+  - BBP_10_2.0_2.0
+  - BBP_20_2.0_2.0
+  # MACD momentum
+  - MACDh_8_17_9
+  # Time cyclicality
+  # - hour_sin
+  # - hour_cos
+  # - dow_sin
+  # - dow_cos
+  # - month_sin
+  # - month_cos
+n_classes: 3
+target:
+  - bin_class
+sequence_length: 120

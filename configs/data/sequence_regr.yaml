@@ -1,0 +1,37 @@
+# Data parameters
+train_path: data/normalized/USDJPY-15m-20210101-20231231_FEATURES.pkl
+test_path: data/normalized/USDJPY-15m-20240101-20241231_FEATURES.pkl
+time_features:
+  - open
+  - high
+  - low
+  - close
+
+features:
+  - volume
+  - close_log_fd_return
+  - close_log_return
+  - EMA_5
+  - EMA_9
+  - EMA_20
+  - EMA_24
+  - EMA_36
+  - EMA_50
+  - EMA_100
+  - EMA_5_slope
+  - EMA_9_slope
+  - EMA_20_slope
+  - EMA_24_slope
+  - EMA_36_slope
+  - EMA_50_slope
+  - EMA_100_slope
+  - ATRr_14
+  - ATRr_60
+  - ATRr_120
+  - RSI_14
+
+target:
+  - close
+
+lookback: 120
+lookforward: 5

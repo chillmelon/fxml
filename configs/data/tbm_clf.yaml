@@ -1,0 +1,29 @@
+dataset_path: data/processed/USDJPY-15m-20210101-20241231_TBM_B6.pkl
+
+time_features:
+  - open
+  - high
+  - low
+  - close
+  - volume
+features:
+  - close_log_fd_return
+  - EMA_5
+  - EMA_9
+  - EMA_20
+  - EMA_24
+  - EMA_36
+  - EMA_50
+  - EMA_100
+  - ATRr_14
+  - ATRr_60
+  - ATRr_120
+  - RSI_14
+
+n_classes: 3
+
+target:
+  - label
+
+lookback: 60
+stride: 1
