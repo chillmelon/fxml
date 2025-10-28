@@ -15,16 +15,10 @@ from fxml.models.model import build_model
 from fxml.utils import get_device
 
 
-@hydra.main(
-    version_base=None, config_path="./configs", config_name="t2v_transformer_clf"
-)
+@hydra.main(version_base=None, config_path="./configs", config_name="ts_tbm_clf")
 def main(config: DictConfig):
-    df = pd.read_pickle(config["data"]["dataset_path"])
-    print(df.columns)
-    df["class"] = df["label"].apply(lambda x: int(x + 1))
-    print(df["class"].value_counts())
-    train_data = df[df.index.year < 2024]
-    test_data = df[df.index.year >= 2024]
+    train_data = pd.read_pickle(config["data"]["train_path"])
+    test_data = pd.read_pickle(config["data"]["test_path"])
 
     dm = ClassificationDataModule(
         train_data,
@@ -41,7 +35,7 @@ def main(config: DictConfig):
     model = build_model(config["model"]["name"], config)
     logger = TensorBoardLogger(
         "lightning_logs",
-        name=f"{config['model']['name']}_{Path(config["data"]["dataset_path"]).stem}",
+        name=f"{config['model']['name']}_{Path(config["data"]["train_path"]).stem}",
     )
 
     profiler = SimpleProfiler(filename="profiler")
@@ -65,7 +59,7 @@ def main(config: DictConfig):
         devices=1,
         profiler=profiler,
         callbacks=[checkpoint_callback, early_stopping],
-        max_epochs=100,
+        max_epochs=config["training"]["num_epochs"],
         logger=logger,
     )
     torch.set_float32_matmul_precision("high")

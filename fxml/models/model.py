@@ -12,7 +12,8 @@ from fxml.models.transformer_regressor.model import TransformerRegressorModule
 def build_model(model_name, config):
     if model_name == "baseline_classifier":
         return BaselineClassifierModule(
-            n_features=len(config["data"]["features"]),
+            n_features=len(config["data"]["time_features"])
+            + len(config["data"]["features"]),
             output_size=config["data"]["n_classes"],
             n_hidden=config["model"]["hidden_size"],
             dropout=config["model"]["dropout"],
@@ -20,7 +21,8 @@ def build_model(model_name, config):
         )
     elif model_name == "lstm_classifier":
         return LSTMClassifierModule(
-            n_features=len(config["data"]["features"]),
+            n_features=len(config["data"]["time_features"])
+            + len(config["data"]["features"]),
             output_size=config["data"]["n_classes"],
             n_hidden=config["model"]["n_hidden"],
             n_layers=config["model"]["n_layers"],
@@ -29,7 +31,8 @@ def build_model(model_name, config):
         )
     elif model_name == "transformer_classifier":
         return TransformerClassifierModule(
-            n_features=len(config["data"]["features"]),
+            n_features=len(config["data"]["time_features"])
+            + len(config["data"]["features"]),
             output_size=config["data"]["n_classes"],
             d_model=config["model"]["d_model"],
             nhead=config["model"]["nhead"],

@@ -1,10 +1,7 @@
-import lightning as pl
-import matplotlib.pyplot as plt
-import seaborn as sns
 import torch
-import torch.nn.functional as F
 from torch import nn
-from torchmetrics.classification import ConfusionMatrix, MulticlassAccuracy
+
+from fxml.models.base_classifier import BaseClassifierModule
 
 
 class TransformerClassifier(nn.Module):
@@ -23,6 +20,7 @@ class TransformerClassifier(nn.Module):
         self.pool = pool
         self.input_proj = nn.Linear(n_features, d_model)
         self.positional_encoding = PositionalEncoding(d_model, dropout)
+        self.cls = nn.Parameter(torch.zeros(1, 1, d_model))
 
         enc_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
@@ -34,17 +32,24 @@ class TransformerClassifier(nn.Module):
         self.encoder = nn.TransformerEncoder(enc_layer, num_layers=num_layers)
         self.fc_out = nn.Linear(d_model, output_size)
 
-    def forward(self, x):
-        # x: (B, T, n_features)
+    def forward(self, x):  # x: (B, T, F)
         x = self.input_proj(x)
+
+        if self.pool == "cls":
+            B = x.size(0)
+            cls = self.cls.expand(B, 1, -1)  # (B,1,D)
+            x = torch.cat([cls, x], dim=1)  # prepend CLS
+
         x = self.positional_encoding(x)
-        x = self.encoder(x)  # (B, T, d_model)
-        if self.pool == "mean":
-            x = x.mean(dim=1)
+        x = self.encoder(x)
+
+        if self.pool == "cls":
+            out = x[:, 0]
+        elif self.pool == "mean":
+            out = x.mean(dim=1)
         else:
-            x = x[:, -1, :]
-        logits = self.fc_out(x)  # (B, C)
-        return logits
+            out = x[:, -1]
+        return self.fc_out(out)
 
 
 class PositionalEncoding(nn.Module):
@@ -68,7 +73,14 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x + self.pe[:, : x.size(1), :])
 
 
-class TransformerClassifierModule(pl.LightningModule):
+class TransformerClassifierModule(BaseClassifierModule):
+    """
+    Transformer classifier Lightning module.
+
+    Uses a Transformer encoder with self-attention for sequence modeling,
+    with optional mean or last pooling strategy.
+    """
+
     def __init__(
         self,
         n_features=1,
@@ -81,9 +93,19 @@ class TransformerClassifierModule(pl.LightningModule):
         label_smoothing=0.0,
         pool="mean",
         lr=1e-3,
+        optimizer="adamw",
+        weight_decay=1e-4,
     ):
-        super().__init__()
-        self.save_hyperparameters()
+        super().__init__(
+            n_features=n_features,
+            output_size=output_size,
+            lr=lr,
+            label_smoothing=label_smoothing,
+            optimizer=optimizer,
+            weight_decay=weight_decay,
+        )
+
+        # Create the transformer model architecture
         self.model = TransformerClassifier(
             n_features=n_features,
             output_size=output_size,
@@ -94,82 +116,3 @@ class TransformerClassifierModule(pl.LightningModule):
             dropout=dropout,
             pool=pool,
         )
-        self.output_size = output_size
-        self.val_preds = []
-        self.val_labels = []
-
-        self.criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
-        self.val_acc = MulticlassAccuracy(num_classes=output_size)
-        self.test_acc = MulticlassAccuracy(num_classes=output_size)
-        self.lr = lr
-
-    def forward(self, x):
-        return self.model(x)  # logits
-
-    def training_step(self, batch, batch_idx):
-        x, y = batch
-        y = y.squeeze().long()
-        logits = self(x)
-        loss = self.criterion(logits, y)
-        self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        x, y = batch
-        y = y.squeeze().long()
-        logits = self(x)
-        loss = self.criterion(logits, y)
-        preds = torch.argmax(logits, dim=1)
-        acc = self.val_acc(preds, y)
-        self.log("val_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-        self.log("val_acc", acc, prog_bar=True, on_step=False, on_epoch=True)
-
-        # Store predictions and labels for confusion matrix
-        self.val_preds.append(preds)
-        self.val_labels.append(y)
-        return loss
-
-    def on_validation_epoch_end(self):
-        val_preds = torch.cat(self.val_preds)
-        val_labels = torch.cat(self.val_labels)
-
-        conf_mat = ConfusionMatrix(task="multiclass", num_classes=self.output_size)
-        # Compute confusion matrix
-        cm = conf_mat(val_preds.cpu(), val_labels.cpu())
-
-        # Plot confusion matrix
-        self.plot_confusion_matrix(cm)
-
-        # Clear stored predictions and labels for the next epoch
-        self.val_preds.clear()
-        self.val_labels.clear()
-
-    def test_step(self, batch, batch_idx):
-        x, y = batch
-        y = y.squeeze().long()
-        logits = self(x)
-        loss = self.criterion(logits, y)
-        preds = torch.argmax(logits, dim=1)
-        acc = self.test_acc(preds, y)
-        self.log("test_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-        self.log("test_acc", acc, prog_bar=True, on_step=False, on_epoch=True)
-
-    def plot_confusion_matrix(self, cm):
-        fig, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
-        ax.set_xlabel("Predicted labels")
-        ax.set_ylabel("True labels")
-        ax.set_title("Confusion Matrix")
-
-        # Log confusion matrix to TensorBoard
-        self.logger.experiment.add_figure("Confusion Matrix", fig, self.current_epoch)
-        plt.close(fig)
-
-    def configure_optimizers(self):
-        opt = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-4)
-        # OneCycleLR (optional): replace StepLR for smoother training
-        # steps_per_epoch = self.trainer.estimated_stepping_batches // self.trainer.max_epochs
-        # sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=3e-4, total_steps=self.trainer.estimated_stepping_batches)
-        # return {"optimizer": opt, "lr_scheduler": {"scheduler": sched, "interval": "step"}}
-        sched = torch.optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.5)
-        return [opt], [sched]

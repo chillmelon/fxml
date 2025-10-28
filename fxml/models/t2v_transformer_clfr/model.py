@@ -1,10 +1,7 @@
-import lightning as pl
-import matplotlib.pyplot as plt
-import seaborn as sns
 import torch
-import torch.nn.functional as F
 from torch import nn
-from torchmetrics.classification import ConfusionMatrix, MulticlassAccuracy
+
+from fxml.models.base_classifier import BaseClassifierModule
 
 
 class T2VTransformerClassifier(nn.Module):
@@ -29,17 +26,10 @@ class T2VTransformerClassifier(nn.Module):
         self.time2vec = Time2Vec(time_dim, kernel_size)
 
         self.positional_encoding = PositionalEncoding(d_model, dropout)
-        # Project Time2Vec output to d_model
+        self.cls = nn.Parameter(torch.zeros(1, 1, d_model))
 
         self.input_proj = nn.Linear(time_dim * (kernel_size + 1) + n_features, d_model)
         # Project Time2Vec output to d_model
-
-        if self.pool == "attn":
-            self.pooler = nn.Sequential(
-                nn.Linear(d_model, d_model),
-                nn.Tanh(),
-                nn.Linear(d_model, 1),
-            )
 
         enc_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
@@ -59,19 +49,21 @@ class T2VTransformerClassifier(nn.Module):
             [X_time, X_other], dim=-1
         )  # (B, T, feature_dim + time_dim * (1+k)
         x = self.input_proj(x)  # (B, T, d_model)
-        x = self.positional_encoding(x)  # (B, T, d_model)
-        x = self.encoder(x)  # (B, T, d_model)
-        if self.pool == "mean":
-            x = x.mean(dim=1)
-        elif self.pool == "attn":
-            a = torch.softmax(self.pooler(x), dim=1)
-            x = torch.sum(a * x, dim=1)
-        else:  # last
-            x = x[:, -1, :]
+        if self.pool == "cls":
+            B = x.size(0)
+            cls = self.cls.expand(B, 1, -1)  # (B,1,D)
+            x = torch.cat([cls, x], dim=1)  # prepend CLS
 
-        # Output classification logits
-        logits = self.fc_out(x)  # (B, output_size)
-        return logits
+        x = self.positional_encoding(x)
+        x = self.encoder(x)
+
+        if self.pool == "cls":
+            out = x[:, 0]
+        elif self.pool == "mean":
+            out = x.mean(dim=1)
+        else:
+            out = x[:, -1]
+        return self.fc_out(out)
 
 
 class Time2Vec(nn.Module):
@@ -151,7 +143,7 @@ class LearnablePositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-class T2VTransformerClassifierModule(pl.LightningModule):
+class T2VTransformerClassifierModule(BaseClassifierModule):
     def __init__(
         self,
         n_timefeatures=4,
@@ -166,9 +158,17 @@ class T2VTransformerClassifierModule(pl.LightningModule):
         label_smoothing=0.0,
         pool="mean",
         lr=1e-3,
+        optimizer="adamw",
+        weight_decay=1e-4,
     ):
-        super().__init__()
-        self.save_hyperparameters()
+        super().__init__(
+            n_features=n_features,
+            output_size=output_size,
+            lr=lr,
+            label_smoothing=label_smoothing,
+            optimizer=optimizer,
+            weight_decay=weight_decay,
+        )
         self.model = T2VTransformerClassifier(
             time_dim=n_timefeatures,
             n_features=n_features,
@@ -181,82 +181,3 @@ class T2VTransformerClassifierModule(pl.LightningModule):
             dropout=dropout,
             pool=pool,
         )
-        self.output_size = output_size
-        self.val_preds = []
-        self.val_labels = []
-
-        self.criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
-        self.val_acc = MulticlassAccuracy(num_classes=output_size)
-        self.test_acc = MulticlassAccuracy(num_classes=output_size)
-        self.lr = lr
-
-    def forward(self, x):
-        return self.model(x)  # logits
-
-    def training_step(self, batch, batch_idx):
-        x, y = batch
-        y = y.squeeze().long()
-        logits = self(x)
-        loss = self.criterion(logits, y)
-        self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        x, y = batch
-        y = y.squeeze().long()
-        logits = self(x)
-        loss = self.criterion(logits, y)
-        preds = torch.argmax(logits, dim=1)
-        acc = self.val_acc(preds, y)
-        self.log("val_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-        self.log("val_acc", acc, prog_bar=True, on_step=False, on_epoch=True)
-
-        # Store predictions and labels for confusion matrix
-        self.val_preds.append(preds)
-        self.val_labels.append(y)
-        return loss
-
-    def on_validation_epoch_end(self):
-        val_preds = torch.cat(self.val_preds)
-        val_labels = torch.cat(self.val_labels)
-
-        conf_mat = ConfusionMatrix(task="multiclass", num_classes=self.output_size)
-        # Compute confusion matrix
-        cm = conf_mat(val_preds.cpu(), val_labels.cpu())
-
-        # Plot confusion matrix
-        self.plot_confusion_matrix(cm)
-
-        # Clear stored predictions and labels for the next epoch
-        self.val_preds.clear()
-        self.val_labels.clear()
-
-    def test_step(self, batch, batch_idx):
-        x, y = batch
-        y = y.squeeze().long()
-        logits = self(x)
-        loss = self.criterion(logits, y)
-        preds = torch.argmax(logits, dim=1)
-        acc = self.test_acc(preds, y)
-        self.log("test_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
-        self.log("test_acc", acc, prog_bar=True, on_step=False, on_epoch=True)
-
-    def plot_confusion_matrix(self, cm):
-        fig, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
-        ax.set_xlabel("Predicted labels")
-        ax.set_ylabel("True labels")
-        ax.set_title("Confusion Matrix")
-
-        # Log confusion matrix to TensorBoard
-        self.logger.experiment.add_figure("Confusion Matrix", fig, self.current_epoch)
-        plt.close(fig)
-
-    def configure_optimizers(self):
-        opt = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-4)
-        # OneCycleLR (optional): replace StepLR for smoother training
-        # steps_per_epoch = self.trainer.estimated_stepping_batches // self.trainer.max_epochs
-        # sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=3e-4, total_steps=self.trainer.estimated_stepping_batches)
-        # return {"optimizer": opt, "lr_scheduler": {"scheduler": sched, "interval": "step"}}
-        sched = torch.optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.5)
-        return [opt], [sched]

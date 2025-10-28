@@ -1,0 +1,26 @@
+# Data parameters
+defaults:
+  - data: tbm_clf
+  - model: t2v_transformer_clfr
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      model:
+        kernel_size: 1, 2
+        pool: cls, mean, last
+        d_model: 64, 128
+        nhead: 4, 8
+        n_layers: 2, 3
+        dim_feedforward: 256, 512
+        dropout: 0.1, 0.2, 0.3
+      # baseline_classifier,transformer_classifier,lstm_classifier, t2v_transformer_clfr
+
+# Training parameters
+training:
+  batch_size: 1024
+  num_epochs: 100
+  num_workers: 0
+  val_split: 0.5
+  shuffle: True

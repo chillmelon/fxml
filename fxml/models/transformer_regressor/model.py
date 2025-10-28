@@ -36,13 +36,22 @@ class TransformerRegressor(nn.Module):
 
     def forward(self, x):  # x: (B, T, F)
         x = self.input_proj(x)
-        B = x.size(0)
-        cls = self.cls.expand(B, 1, -1)  # (B,1,D)
-        x = torch.cat([cls, x], dim=1)  # prepend CLS
+
+        if self.pool == "cls":
+            B = x.size(0)
+            cls = self.cls.expand(B, 1, -1)  # (B,1,D)
+            x = torch.cat([cls, x], dim=1)  # prepend CLS
+
         x = self.positional_encoding(x)
         x = self.encoder(x)
-        cls_state = x[:, 0]  # (B,D)
-        return self.fc_out(cls_state)
+
+        if self.pool == "cls":
+            out = x[:, 0]
+        elif self.pool == "mean":
+            out = x.mean(dim=1)
+        else:
+            out = x[:, -1]
+        return self.fc_out(out)
 
 
 class PositionalEncoding(nn.Module):

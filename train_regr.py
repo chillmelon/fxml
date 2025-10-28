@@ -40,7 +40,7 @@ def main(config: DictConfig):
     profiler = SimpleProfiler(filename="profiler")
 
     early_stopping = EarlyStopping(
-        monitor="val_loss", mode="min", patience=12, verbose=True
+        monitor="val_loss", mode="min", patience=5, verbose=True
     )
 
     checkpoint_callback = ModelCheckpoint(

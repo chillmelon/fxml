@@ -50,13 +50,21 @@ class T2VTransformerRegressor(nn.Module):
             [X_time, X_other], dim=-1
         )  # (B, T, feature_dim + time_dim * (1+k)
         x = self.input_proj(x)  # (B, T, d_model)
-        B = x.size(0)
-        cls = self.cls.expand(B, 1, -1)  # (B,1,D)
-        x = torch.cat([cls, x], dim=1)  # prepend CLS
-        x = self.positional_encoding(x)  # (B, T, d_model)
-        x = self.encoder(x)  # (B, T, d_model)
-        cls_state = x[:, 0]  # (B,D)
-        return self.fc_out(cls_state)
+        if self.pool == "cls":
+            B = x.size(0)
+            cls = self.cls.expand(B, 1, -1)  # (B,1,D)
+            x = torch.cat([cls, x], dim=1)  # prepend CLS
+
+        x = self.positional_encoding(x)
+        x = self.encoder(x)
+
+        if self.pool == "cls":
+            out = x[:, 0]
+        elif self.pool == "mean":
+            out = x.mean(dim=1)
+        else:
+            out = x[:, -1]
+        return self.fc_out(out)
 
 
 class Time2Vec(nn.Module):

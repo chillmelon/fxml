@@ -1,6 +1,6 @@
-import lightning as pl
-import torch
 from torch import nn
+
+from fxml.models.base_classifier import BaseClassifierModule
 
 
 class LSTMClassifier(nn.Module):
@@ -24,13 +24,37 @@ class LSTMClassifier(nn.Module):
         return logits
 
 
-class LSTMClassifierModule(pl.LightningModule):
-    def __init__(
-        self, n_features=1, output_size=3, n_hidden=64, n_layers=2, dropout=0.0, lr=1e-3
-    ):
-        super().__init__()
-        self.save_hyperparameters()
+class LSTMClassifierModule(BaseClassifierModule):
+    """
+    LSTM classifier Lightning module.
 
+    Uses LSTM layers for sequence modeling with the final hidden state
+    used for classification. Now includes accuracy tracking and confusion
+    matrix visualization like other classifiers.
+    """
+
+    def __init__(
+        self,
+        n_features=1,
+        output_size=3,
+        n_hidden=64,
+        n_layers=2,
+        dropout=0.0,
+        label_smoothing=0.0,
+        lr=1e-3,
+        optimizer="adam",  # Default to Adam to maintain original behavior
+        weight_decay=1e-4,
+    ):
+        super().__init__(
+            n_features=n_features,
+            output_size=output_size,
+            lr=lr,
+            label_smoothing=label_smoothing,
+            optimizer=optimizer,
+            weight_decay=weight_decay,
+        )
+
+        # Create the LSTM model architecture
         self.model = LSTMClassifier(
             n_features=n_features,
             output_size=output_size,
@@ -38,41 +62,3 @@ class LSTMClassifierModule(pl.LightningModule):
             n_layers=n_layers,
             dropout=dropout,
         )
-
-        self.lr = lr
-        self.criterion = nn.CrossEntropyLoss()
-
-    def forward(self, x, labels=None):
-        return self.model(x)  # logits
-
-    def training_step(self, batch, batch_idx):
-        x, y = batch
-        y = y.squeeze().long()
-        logits = self(x)
-        loss = self.criterion(logits, y)
-
-        self.log("train_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
-
-    def validation_step(self, batch, batch_idx):
-        x, y = batch
-        y = y.squeeze().long()
-        logits = self(x)
-        loss = self.criterion(logits, y)
-
-        self.log("val_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
-
-    def test_step(self, batch, batch_idx):
-        x, y = batch
-        y = y.squeeze().long()
-        logits = self(x)
-        loss = self.criterion(logits, y)
-
-        self.log("test_loss", loss, prog_bar=True, logger=True)
-        return {"loss": loss}
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
-        return [optimizer], [scheduler]

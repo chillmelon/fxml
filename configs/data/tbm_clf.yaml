@@ -1,4 +1,5 @@
-dataset_path: data/processed/USDJPY-15m-20210101-20241231_TBM_B6.pkl
+train_path: data/normalized/USDJPY-15m-20210101-20231231_TBM_B6.pkl
+test_path: data/normalized/USDJPY-15m-20240101-20241231_TBM_B6.pkl
 
 time_features:
   - open
