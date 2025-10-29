@@ -60,7 +60,7 @@ def main(cfg: DictConfig):
         devices=1,
         profiler=profiler,
         callbacks=[checkpoint_callback, early_stopping],
-        max_epochs=100,
+        max_epochs=cfg.training.num_epochs,
         logger=logger,
     )
     torch.set_float32_matmul_precision("high")

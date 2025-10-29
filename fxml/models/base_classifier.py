@@ -62,8 +62,22 @@ class BaseClassifierModule(pl.LightningModule):
         self.val_labels = []
 
     def forward(self, x):
+        if self.model is None:
+            raise RuntimeError("Model not initialized. Subclass must set self.model")
         """Forward pass through the model."""
         return self.model(x)  # logits
+
+    def on_train_start(self):
+        """Log hyperparameters to TensorBoard at the start of training."""
+        if self.logger:
+            # Get all hyperparameters saved by save_hyperparameters()
+            hparams = dict(self.hparams)
+
+            # Define metric for hyperparameter comparison
+            metric_dict = {"test_acc": -1}
+
+            # Log to TensorBoard
+            self.logger.log_hyperparams(hparams, metric_dict)
 
     def training_step(self, batch, batch_idx):
         """Training step: compute loss and log metrics."""
@@ -90,7 +104,7 @@ class BaseClassifierModule(pl.LightningModule):
         self.val_preds.append(preds)
         self.val_labels.append(y)
 
-        return loss
+        return {"loss": loss, "outputs": preds, "labels": y}
 
     def on_validation_epoch_end(self):
         """Compute and plot confusion matrix at the end of validation epoch."""
@@ -120,6 +134,17 @@ class BaseClassifierModule(pl.LightningModule):
 
         self.log("test_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
         self.log("test_acc", acc, prog_bar=True, on_step=False, on_epoch=True)
+
+        return {"loss": loss, "outputs": preds, "labels": y}
+
+    def on_test_end(self):
+        """Log test loss as hp_metric after testing completes."""
+        if self.logger and hasattr(self.trainer.callback_metrics, "__getitem__"):
+            test_acc = self.trainer.callback_metrics.get("test_acc", None)
+            if test_acc is not None:
+                self.logger.log_metrics(
+                    {"test_acc": test_loss.item()}, step=self.current_epoch
+                )
 
     def plot_confusion_matrix(self, cm):
         """Plot and log confusion matrix to TensorBoard."""

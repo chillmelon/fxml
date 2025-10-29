@@ -61,6 +61,18 @@ class BaseRegressorModule(pl.LightningModule):
         # Subclass must set self.model in their __init__
         self.model = None
 
+    def on_train_start(self):
+        """Log hyperparameters to TensorBoard at the start of training."""
+        if self.logger:
+            # Get all hyperparameters saved by save_hyperparameters()
+            hparams = dict(self.hparams)
+
+            # Define metric for hyperparameter comparison
+            metric_dict = {"test_loss": -1}
+
+            # Log to TensorBoard
+            self.logger.log_hyperparams(hparams, metric_dict)
+
     def build_model(self):
         """Build and return the model architecture.
 
@@ -166,6 +178,15 @@ class BaseRegressorModule(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         preds, y, loss = self._common_step(batch, "test")
         return {"loss": loss, "outputs": preds, "labels": y}
+
+    def on_test_end(self):
+        """Log test loss as hp_metric after testing completes."""
+        if self.logger and hasattr(self.trainer.callback_metrics, "__getitem__"):
+            test_loss = self.trainer.callback_metrics.get("test_loss", None)
+            if test_loss is not None:
+                self.logger.log_metrics(
+                    {"test_loss": test_loss.item()}, step=self.current_epoch
+                )
 
     def configure_optimizers(self):
         # Select optimizer type
