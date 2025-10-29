@@ -1,16 +1,16 @@
 # Data parameters
 defaults:
   - data: sequence_regr
-  - model: t2v_transformer_regr_lg
+  - model: t2v_xfmr_regr_lg
   - _self_
 
 hydra:
   sweeper:
     params:
-      model.kernel_size: 2, 3
+      # model.kernel_size: 2, 3
       # model.d_model: 64,128
       # model.nhead: 4,8
-      model.n_layers: 2,3
+      # model.n_layers: 2,3
       # model.dim_feedforward: 256,512
       model.dropout: 0.1,0.2,0.3
 
