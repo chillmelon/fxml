@@ -17,25 +17,25 @@ from fxml.utils import get_device
 
 
 @hydra.main(version_base=None, config_path="./configs", config_name="tune_t2v_xfmr")
-def main(config: DictConfig):
-    train_data = pd.read_pickle(config["data"]["train_path"])
-    test_data = pd.read_pickle(config["data"]["test_path"])
+def main(cfg: DictConfig):
+    train_data = pd.read_pickle(cfg.data.train_path)
+    test_data = pd.read_pickle(cfg.data.test_path)
 
     dm = MultiStepRegrDataModule(
         train_data,
         test_data,
-        feature_cols=config["data"]["time_features"] + config["data"]["features"],
-        target_col=config["data"]["target"],
-        lookback=config["data"]["lookback"],
-        lookforward=config["data"]["lookforward"],
-        val_split=config["training"]["val_split"],
-        batch_size=config["training"]["batch_size"],
+        feature_cols=cfg.data.time_features + cfg.data.features,
+        target_col=cfg.data.target,
+        lookback=cfg.data.lookback,
+        lookforward=cfg.data.lookforward,
+        val_split=cfg.training.val_split,
+        batch_size=cfg.training.batch_size,
     )
 
-    model = build_model(config["model"]["name"], config)
+    model = build_model(cfg.model.name, cfg)
     logger = TensorBoardLogger(
         "lightning_logs",
-        name=f"{config['model']['name']}_{Path(config["data"]["train_path"]).stem}",
+        name=f"{cfg.model.name}_{Path(cfg.data.train_path).stem}",
     )
 
     profiler = SimpleProfiler(filename="profiler")

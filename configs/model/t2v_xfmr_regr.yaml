@@ -7,3 +7,4 @@ dim_feedforward: 256
 dropout: 0.2
 pool: "cls"
 lr: 3e-4
+use_positional_encoding: False

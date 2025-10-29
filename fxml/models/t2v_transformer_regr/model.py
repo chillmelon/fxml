@@ -18,15 +18,18 @@ class T2VTransformerRegressor(nn.Module):
         dim_feedforward=128,
         dropout=0.1,
         pool="last",
+        use_positional_encoding=True,
     ):  # "last" | "mean"
         super().__init__()
         self.time_dim = time_dim
         self.n_features = n_features
         self.pool = pool
+        self.use_positional_encoding = use_positional_encoding
         # Time2Vec embedding
         self.time2vec = Time2Vec(time_dim, kernel_size)
 
-        self.positional_encoding = PositionalEncoding(d_model, dropout)
+        if use_positional_encoding:
+            self.positional_encoding = PositionalEncoding(d_model, dropout)
         self.cls = nn.Parameter(torch.zeros(1, 1, d_model))
 
         self.input_proj = nn.Linear(time_dim * (kernel_size + 1) + n_features, d_model)
@@ -55,7 +58,8 @@ class T2VTransformerRegressor(nn.Module):
             cls = self.cls.expand(B, 1, -1)  # (B,1,D)
             x = torch.cat([cls, x], dim=1)  # prepend CLS
 
-        x = self.positional_encoding(x)
+        if self.use_positional_encoding:
+            x = self.positional_encoding(x)
         x = self.encoder(x)
 
         if self.pool == "cls":
@@ -143,6 +147,7 @@ class T2VTransformerRegressorModule(BaseRegressorModule):
         scheduler_step_size=10,
         scheduler_gamma=0.5,
         enable_plotting=True,
+        use_positional_encoding=True,
     ):
         super().__init__(
             lr=lr,
@@ -166,4 +171,5 @@ class T2VTransformerRegressorModule(BaseRegressorModule):
             dim_feedforward=dim_feedforward,
             dropout=dropout,
             pool=pool,
+            use_positional_encoding=use_positional_encoding,
         )

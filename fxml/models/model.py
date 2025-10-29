@@ -115,6 +115,7 @@ def build_model(model_name, config):
             dropout=config["model"]["dropout"],
             pool=config["model"]["pool"],
             lr=config["model"]["lr"],
+            use_positional_encoding=config["model"]["use_positional_encoding"],
         )
 
     else:
