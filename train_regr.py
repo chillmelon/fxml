@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import hydra
@@ -17,8 +18,6 @@ from fxml.utils import get_device
 
 @hydra.main(version_base=None, config_path="./configs", config_name="tune_t2v_xfmr")
 def main(config: DictConfig):
-    print(OmegaConf.to_yaml(config))
-    return
     train_data = pd.read_pickle(config["data"]["train_path"])
     test_data = pd.read_pickle(config["data"]["test_path"])
 
