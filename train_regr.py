@@ -36,6 +36,7 @@ def main(cfg: DictConfig):
     logger = TensorBoardLogger(
         "lightning_logs",
         name=f"{cfg.model.name}_{Path(cfg.data.train_path).stem}",
+        default_hp_metric=False,
     )
 
     profiler = SimpleProfiler(filename="profiler")
