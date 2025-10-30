@@ -52,19 +52,6 @@ class MultiStepRegrDataModule(L.LightningDataModule):
         self.val_split = val_split
 
     def setup(self, stage=None):
-        # scaler = StandardScaler()
-        # self.train_data = pd.DataFrame(
-        #     scaler.fit_transform(self.train_data),
-        #     index=self.train_data.index,
-        #     columns=self.train_data.columns,
-        # )
-        #
-        # self.test_data = pd.DataFrame(
-        #     scaler.transform(self.test_data),
-        #     index=self.test_data.index,
-        #     columns=self.test_data.columns,
-        # )
-
         X_train, y_train = create_multistep_sequences(
             self.train_data,
             self.lookback,

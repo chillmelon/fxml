@@ -1,0 +1,93 @@
+# 價格
+open: { type: std }
+high: { type: std }
+low: { type: std }
+close: { type: std }
+
+# 成交量與市場微結構
+volume: { type: log }
+spread: { type: robust }
+tick: { type: none }
+
+# 報酬類
+close_pct_return: { type: std }
+close_return: { type: std }
+close_log_return: { type: std }
+close_fd_return: { type: std }
+close_log_fd_return: { type: std }
+
+# EMA 與 slope
+EMA_5: { type: std }
+EMA_5_slope: { type: std }
+EMA_9: { type: std }
+EMA_9_slope: { type: std }
+EMA_20: { type: std }
+EMA_20_slope: { type: std }
+EMA_24: { type: std }
+EMA_24_slope: { type: std }
+EMA_36: { type: std }
+EMA_36_slope: { type: std }
+EMA_50: { type: std }
+EMA_50_slope: { type: std }
+EMA_100: { type: std }
+EMA_100_slope: { type: std }
+
+# 波動與動能
+ATRr_14: { type: robust }
+ATRr_60: { type: robust }
+ATRr_120: { type: robust }
+ADX_14: { type: std }
+ADXR_14_2: { type: std }
+DMP_14: { type: std }
+DMN_14: { type: std }
+RSI_14: { type: minmax }
+RSI_25: { type: minmax }
+RSI_50: { type: minmax }
+
+# Bollinger Bands
+BBL_5_2.0_2.0: { type: std }
+BBM_5_2.0_2.0: { type: std }
+BBU_5_2.0_2.0: { type: std }
+BBB_5_2.0_2.0: { type: std }
+BBP_5_2.0_2.0: { type: std }
+BBL_10_2.0_2.0: { type: std }
+BBM_10_2.0_2.0: { type: std }
+BBU_10_2.0_2.0: { type: std }
+BBB_10_2.0_2.0: { type: std }
+BBP_10_2.0_2.0: { type: std }
+BBL_15_2.0_2.0: { type: std }
+BBM_15_2.0_2.0: { type: std }
+BBU_15_2.0_2.0: { type: std }
+BBB_15_2.0_2.0: { type: std }
+BBP_15_2.0_2.0: { type: std }
+BBL_20_2.0_2.0: { type: std }
+BBM_20_2.0_2.0: { type: std }
+BBU_20_2.0_2.0: { type: std }
+BBB_20_2.0_2.0: { type: std }
+BBP_20_2.0_2.0: { type: std }
+
+# MACD
+MACD_8_17_9: { type: std }
+MACDh_8_17_9: { type: std }
+MACDs_8_17_9: { type: std }
+MACD_12_26_9: { type: std }
+MACDh_12_26_9: { type: std }
+MACDs_12_26_9: { type: std }
+
+# 時間與週期特徵
+unix_time: { type: none }
+minute: { type: none }
+hour: { type: none }
+dow: { type: none }
+dom: { type: none }
+month: { type: none }
+minute_sin: { type: none }
+minute_cos: { type: none }
+hour_sin: { type: none }
+hour_cos: { type: none }
+dow_sin: { type: none }
+dow_cos: { type: none }
+dom_sin: { type: none }
+dom_cos: { type: none }
+month_sin: { type: none }
+month_cos: { type: none }

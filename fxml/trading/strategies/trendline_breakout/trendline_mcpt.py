@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from fxml.trading.strategies.bar_permute import get_permutation
+from fxml.trading.bar_permute import get_permutation
 from fxml.trading.strategies.trendline_breakout.trendline_breakout import (
     optimize_trendline,
 )

@@ -1,6 +1,6 @@
 # Data parameters
-train_path: data/normalized/USDJPY-15m-20210101-20231231_FEATURES.pkl
-test_path: data/normalized/USDJPY-15m-20240101-20241231_FEATURES.pkl
+train_path: data/processed/USDJPY-15m-20210101-20231231_FEATURES_NORM.pkl
+test_path: data/processed/USDJPY-15m-20240101-20241231_FEATURES_NORM.pkl
 time_features:
   - open
   - high

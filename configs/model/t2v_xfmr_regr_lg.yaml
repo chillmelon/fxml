@@ -1,9 +1,10 @@
 name: "t2v_transformer_regr"
 kernel_size: 2
 d_model: 128
-nhead: 8
+nhead: 4
 n_layers: 2
 dim_feedforward: 512
 dropout: 0.2
 pool: "cls"
 lr: 3e-4
+use_positional_encoding: True
