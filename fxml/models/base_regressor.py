@@ -148,7 +148,7 @@ class BaseRegressorModule(pl.LightningModule):
         self.val_labels.clear()
 
         # Create figure with two subplots
-        fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+        fig, ax = plt.subplots(1, 2, figsize=(16, 5))
 
         # Plot 1: Predicted vs Actual
         ax[0].scatter(labels, preds, alpha=0.5)
