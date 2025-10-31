@@ -1,0 +1,95 @@
+# === 依照舊版 regex_mapping 實際匹配結果 ===
+
+# 價格
+open: { type: minmax }
+high: { type: minmax }
+low: { type: minmax }
+close: { type: minmax }
+
+# 成交量與市場微結構
+volume: { type: robust } # (r"(volume)")
+spread: { type: std } # (r"(spread)" 合併錯誤仍可能部分命中)
+tick: { type: robust } # (r"(tick)") — 被誤分類
+
+# 報酬類
+close_pct_return: { type: std } # 未匹配
+close_return: { type: std }
+close_log_return: { type: std } # 應該匹配但因少逗號錯誤沒被命中
+close_fd_return: { type: std }
+close_log_fd_return: { type: std }
+
+# EMA 與 slope
+EMA_5: { type: std }
+EMA_5_slope: { type: std }
+EMA_9: { type: std }
+EMA_9_slope: { type: std }
+EMA_20: { type: std }
+EMA_20_slope: { type: std }
+EMA_24: { type: std }
+EMA_24_slope: { type: std }
+EMA_36: { type: std }
+EMA_36_slope: { type: std }
+EMA_50: { type: std }
+EMA_50_slope: { type: std }
+EMA_100: { type: std }
+EMA_100_slope: { type: std }
+
+# 波動與動能
+ATRr_14: { type: minmax } # (r"(atr)")
+ATRr_60: { type: minmax }
+ATRr_120: { type: minmax }
+ADX_14: { type: minmax } # (r"(adx|plus_di|minus_di)")
+ADXR_14_2: { type: none }
+DMP_14: { type: none }
+DMN_14: { type: none }
+RSI_14: { type: minmax } # (r"(rsi)")
+RSI_25: { type: minmax }
+RSI_50: { type: minmax }
+
+# Bollinger Bands
+BBL_5_2.0_2.0: { type: none }
+BBM_5_2.0_2.0: { type: none }
+BBU_5_2.0_2.0: { type: none }
+BBB_5_2.0_2.0: { type: std } # (r"(bbb_|dc|macd)")
+BBP_5_2.0_2.0: { type: none }
+BBL_10_2.0_2.0: { type: none }
+BBM_10_2.0_2.0: { type: none }
+BBU_10_2.0_2.0: { type: none }
+BBB_10_2.0_2.0: { type: std }
+BBP_10_2.0_2.0: { type: none }
+BBL_15_2.0_2.0: { type: none }
+BBM_15_2.0_2.0: { type: none }
+BBU_15_2.0_2.0: { type: none }
+BBB_15_2.0_2.0: { type: std }
+BBP_15_2.0_2.0: { type: none }
+BBL_20_2.0_2.0: { type: none }
+BBM_20_2.0_2.0: { type: none }
+BBU_20_2.0_2.0: { type: none }
+BBB_20_2.0_2.0: { type: std }
+BBP_20_2.0_2.0: { type: none }
+
+# MACD
+MACD_8_17_9: { type: std }
+MACDh_8_17_9: { type: std }
+MACDs_8_17_9: { type: std }
+MACD_12_26_9: { type: std }
+MACDh_12_26_9: { type: std }
+MACDs_12_26_9: { type: std }
+
+# 時間與週期特徵
+unix_time: { type: none }
+minute: { type: none }
+hour: { type: none }
+dow: { type: none }
+dom: { type: none }
+month: { type: none }
+minute_sin: { type: none }
+minute_cos: { type: none }
+hour_sin: { type: none }
+hour_cos: { type: none }
+dow_sin: { type: none }
+dow_cos: { type: none }
+dom_sin: { type: none }
+dom_cos: { type: none }
+month_sin: { type: none }
+month_cos: { type: none }

@@ -1,4 +1,4 @@
-name: "t2v_transformer_regr"
+name: "t2vp_transformer_regr"
 kernel_size: 1
 d_model: 64
 nhead: 4
@@ -7,4 +7,3 @@ dim_feedforward: 256
 dropout: 0.2
 pool: "cls"
 lr: 3e-4
-use_positional_encoding: True

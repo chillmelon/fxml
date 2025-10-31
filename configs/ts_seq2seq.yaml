@@ -1,11 +1,11 @@
 defaults:
   - data: sequence_regr
-  - model: t2v_xfmr_regr_lf
+  - model: t2v_xfmr_regr
   - _self_
 hydra:
   sweeper:
     params:
-      model: t2v_xfmr_regr, xfmr_regressor
+      model: xfmr_regr, t2v_xfmr_regr, t2vp_xfmr_regr
 # Training parameters
 training:
   batch_size: 1024

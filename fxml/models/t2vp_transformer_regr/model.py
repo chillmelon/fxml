@@ -5,7 +5,7 @@ from fxml.models.base_regressor import BaseRegressorModule
 from fxml.models.transformer_regressor.model import PositionalEncoding
 
 
-class T2VTransformerRegressor(nn.Module):
+class T2VPTransformerRegressor(nn.Module):
     def __init__(
         self,
         n_features,
@@ -19,16 +19,16 @@ class T2VTransformerRegressor(nn.Module):
         pool="last",
     ):  # "last" | "mean"
         super().__init__()
+        self.time_dim = n_features
         self.n_features = n_features
         self.pool = pool
         # Time2Vec embedding
         self.time2vec = Time2Vec(n_features, kernel_size)
 
+        self.positional_encoding = PositionalEncoding(d_model, dropout)
         self.cls = nn.Parameter(torch.zeros(1, 1, d_model))
 
-        self.input_proj = nn.Linear(
-            n_features * (kernel_size) * 2 + n_features, d_model
-        )
+        self.input_proj = nn.Linear(n_features * (kernel_size + 1), d_model)
         # Project Time2Vec output to d_model
 
         enc_layer = nn.TransformerEncoderLayer(
@@ -49,6 +49,7 @@ class T2VTransformerRegressor(nn.Module):
             cls = self.cls.expand(B, 1, -1)  # (B,1,D)
             x = torch.cat([cls, x], dim=1)  # prepend CLS
 
+        x = self.positional_encoding(x)
         x = self.encoder(x)
 
         if self.pool == "cls":
@@ -85,18 +86,9 @@ class Time2Vec(nn.Module):
         wa = self.wa  # (1, input_dim, k)
         ba = self.ba  # (1, input_dim, k)
 
-        # Periodic components (sin + cos)
-        sin_term = torch.sin(x_exp * wa + ba)
-        cos_term = torch.cos(x_exp * wa + ba)
-
-        # Flatten periodic terms along the last dimension
-        periodic = torch.cat([sin_term, cos_term], dim=-1)  # (B, T, input_dim, 2k)
-        periodic = periodic.contiguous().view(x.shape[0], x.shape[1], -1)
-        # periodic = torch.sin(x_exp * wa + ba)  # (B, T, input_dim, k)
-        # periodic = periodic.contiguous().reshape(x.shape[0], x.shape[1], -1)
-        out = torch.cat(
-            [trend, periodic], dim=-1
-        )  # (B, T, input_dim + 2 *input_dim * k)
+        periodic = torch.sin(x_exp * wa + ba)  # (B, T, input_dim, k)
+        periodic = periodic.contiguous().reshape(x.shape[0], x.shape[1], -1)
+        out = torch.cat([trend, periodic], dim=-1)  # (B, T, input_dim + input_dim * k)
         return out
 
 
@@ -125,7 +117,7 @@ class LearnablePositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-class T2VTransformerRegressorModule(BaseRegressorModule):
+class T2VPTransformerRegressorModule(BaseRegressorModule):
     def __init__(
         self,
         n_features=1,
@@ -156,7 +148,7 @@ class T2VTransformerRegressorModule(BaseRegressorModule):
         self.save_hyperparameters()
 
         # Build model
-        self.model = T2VTransformerRegressor(
+        self.model = T2VPTransformerRegressor(
             n_features=n_features,
             output_size=output_size,
             kernel_size=kernel_size,

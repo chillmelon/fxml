@@ -8,6 +8,7 @@ from fxml.models.transformer_regressor.model import PositionalEncoding
 class T2VTransformerRegressor(nn.Module):
     def __init__(
         self,
+        time_dim,
         n_features,
         output_size,
         kernel_size=1,
@@ -17,18 +18,21 @@ class T2VTransformerRegressor(nn.Module):
         dim_feedforward=128,
         dropout=0.1,
         pool="last",
+        use_positional_encoding=True,
     ):  # "last" | "mean"
         super().__init__()
+        self.time_dim = time_dim
         self.n_features = n_features
         self.pool = pool
+        self.use_positional_encoding = use_positional_encoding
         # Time2Vec embedding
-        self.time2vec = Time2Vec(n_features, kernel_size)
+        self.time2vec = Time2Vec(time_dim, kernel_size)
 
+        if use_positional_encoding:
+            self.positional_encoding = PositionalEncoding(d_model, dropout)
         self.cls = nn.Parameter(torch.zeros(1, 1, d_model))
 
-        self.input_proj = nn.Linear(
-            n_features * (kernel_size) * 2 + n_features, d_model
-        )
+        self.input_proj = nn.Linear(time_dim * (kernel_size + 1) + n_features, d_model)
         # Project Time2Vec output to d_model
 
         enc_layer = nn.TransformerEncoderLayer(
@@ -42,13 +46,20 @@ class T2VTransformerRegressor(nn.Module):
         self.fc_out = nn.Linear(d_model, output_size)
 
     def forward(self, x):
-        x = self.time2vec(x)  # (B, T, time_dim + time_dim * k)
+        X_time = x[:, :, : self.time_dim]  # (B, T, time_dim)
+        X_other = x[:, :, self.time_dim :]  # (B, T, feature_dim)
+        X_time = self.time2vec(X_time)  # (B, T, time_dim + time_dim * k)
+        x = torch.cat(
+            [X_time, X_other], dim=-1
+        )  # (B, T, feature_dim + time_dim * (1+k)
         x = self.input_proj(x)  # (B, T, d_model)
         if self.pool == "cls":
             B = x.size(0)
             cls = self.cls.expand(B, 1, -1)  # (B,1,D)
             x = torch.cat([cls, x], dim=1)  # prepend CLS
 
+        if self.use_positional_encoding:
+            x = self.positional_encoding(x)
         x = self.encoder(x)
 
         if self.pool == "cls":
@@ -85,18 +96,9 @@ class Time2Vec(nn.Module):
         wa = self.wa  # (1, input_dim, k)
         ba = self.ba  # (1, input_dim, k)
 
-        # Periodic components (sin + cos)
-        sin_term = torch.sin(x_exp * wa + ba)
-        cos_term = torch.cos(x_exp * wa + ba)
-
-        # Flatten periodic terms along the last dimension
-        periodic = torch.cat([sin_term, cos_term], dim=-1)  # (B, T, input_dim, 2k)
-        periodic = periodic.contiguous().view(x.shape[0], x.shape[1], -1)
-        # periodic = torch.sin(x_exp * wa + ba)  # (B, T, input_dim, k)
-        # periodic = periodic.contiguous().reshape(x.shape[0], x.shape[1], -1)
-        out = torch.cat(
-            [trend, periodic], dim=-1
-        )  # (B, T, input_dim + 2 *input_dim * k)
+        periodic = torch.sin(x_exp * wa + ba)  # (B, T, input_dim, k)
+        periodic = periodic.contiguous().reshape(x.shape[0], x.shape[1], -1)
+        out = torch.cat([trend, periodic], dim=-1)  # (B, T, input_dim + input_dim * k)
         return out
 
 
@@ -128,6 +130,7 @@ class LearnablePositionalEncoding(nn.Module):
 class T2VTransformerRegressorModule(BaseRegressorModule):
     def __init__(
         self,
+        n_timefeatures=4,
         n_features=1,
         output_size=3,
         kernel_size=1,
@@ -144,6 +147,7 @@ class T2VTransformerRegressorModule(BaseRegressorModule):
         scheduler_step_size=10,
         scheduler_gamma=0.5,
         enable_plotting=True,
+        use_positional_encoding=True,
     ):
         super().__init__(
             lr=lr,
@@ -157,6 +161,7 @@ class T2VTransformerRegressorModule(BaseRegressorModule):
 
         # Build model
         self.model = T2VTransformerRegressor(
+            time_dim=n_timefeatures,
             n_features=n_features,
             output_size=output_size,
             kernel_size=kernel_size,
@@ -166,4 +171,5 @@ class T2VTransformerRegressorModule(BaseRegressorModule):
             dim_feedforward=dim_feedforward,
             dropout=dropout,
             pool=pool,
+            use_positional_encoding=use_positional_encoding,
         )

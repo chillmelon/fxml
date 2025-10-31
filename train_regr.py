@@ -16,7 +16,7 @@ from fxml.models.model import build_model
 from fxml.utils import get_device
 
 
-@hydra.main(version_base=None, config_path="./configs", config_name="tune_t2v_xfmr")
+@hydra.main(version_base=None, config_path="./configs", config_name="ts_seq2seq")
 def main(cfg: DictConfig):
     train_data = pd.read_pickle(cfg.data.train_path)
     test_data = pd.read_pickle(cfg.data.test_path)
@@ -24,7 +24,7 @@ def main(cfg: DictConfig):
     dm = MultiStepRegrDataModule(
         train_data,
         test_data,
-        feature_cols=cfg.data.time_features + cfg.data.features,
+        feature_cols=cfg.data.features,
         target_col=cfg.data.target,
         lookback=cfg.data.lookback,
         lookforward=cfg.data.lookforward,

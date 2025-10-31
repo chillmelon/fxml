@@ -1,16 +1,16 @@
 # Data parameters
 train_path: data/processed/USDJPY-15m-20210101-20231231_FEATURES_NORM.pkl
 test_path: data/processed/USDJPY-15m-20240101-20241231_FEATURES_NORM.pkl
-time_features:
+# time_features:
+
+features:
   - open
   - high
   - low
   - close
-
-features:
-  - volume
   - close_log_fd_return
   - close_log_return
+  - volume
   - EMA_5
   - EMA_9
   - EMA_20
@@ -28,10 +28,18 @@ features:
   - ATRr_14
   - ATRr_60
   - ATRr_120
-  - RSI_14
+  # - RSI_14
+  # - hour_sin
+  # - hour_cos
+  # - dow_sin
+  # - dow_cos
+  # - dom_sin
+  # - dom_cos
+  # - month_sin
+  # - month_cos
 
 target:
   - close
 
-lookback: 16
+lookback: 60
 lookforward: 5

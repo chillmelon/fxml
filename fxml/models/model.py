@@ -5,6 +5,7 @@ from fxml.models.lstm_classifier.model import LSTMClassifierModule
 from fxml.models.lstm_regressor.model import LSTMRegressorModule
 from fxml.models.t2v_transformer_clfr.model import T2VTransformerClassifierModule
 from fxml.models.t2v_transformer_regr.model import T2VTransformerRegressorModule
+from fxml.models.t2vp_transformer_regr.model import T2VPTransformerRegressorModule
 from fxml.models.transformer_classifier.model import TransformerClassifierModule
 from fxml.models.transformer_regressor.model import TransformerRegressorModule
 
@@ -59,8 +60,7 @@ def build_model(model_name, config):
 
     elif model_name == "baseline_regressor":
         return BaselineRegressorModule(
-            n_features=len(config["data"]["time_features"])
-            + len(config["data"]["features"]),
+            n_features=len(config["data"]["features"]),
             output_size=config["data"]["lookforward"],
             n_hidden=config["model"]["n_hidden"],
             dropout=config["model"]["dropout"],
@@ -69,8 +69,7 @@ def build_model(model_name, config):
 
     elif model_name == "lstm_regressor":
         return LSTMRegressorModule(
-            n_features=len(config["data"]["time_features"])
-            + len(config["data"]["features"]),
+            n_features=len(config["data"]["features"]),
             output_size=config["data"]["lookforward"],
             n_hidden=config["model"]["n_hidden"],
             n_layers=config["model"]["n_layers"],
@@ -80,8 +79,7 @@ def build_model(model_name, config):
 
     elif model_name == "gru_regressor":
         return GRURegressorModule(
-            n_features=len(config["data"]["time_features"])
-            + len(config["data"]["features"]),
+            n_features=len(config["data"]["features"]),
             output_size=config["data"]["lookforward"],
             n_hidden=config["model"]["n_hidden"],
             n_layers=config["model"]["n_layers"],
@@ -91,8 +89,7 @@ def build_model(model_name, config):
 
     elif model_name == "transformer_regressor":
         return TransformerRegressorModule(
-            n_features=len(config["data"]["time_features"])
-            + len(config["data"]["features"]),
+            n_features=len(config["data"]["features"]),
             output_size=config["data"]["lookforward"],
             d_model=config["model"]["d_model"],
             nhead=config["model"]["nhead"],
@@ -105,7 +102,6 @@ def build_model(model_name, config):
 
     elif model_name == "t2v_transformer_regr":
         return T2VTransformerRegressorModule(
-            n_timefeatures=len(config["data"]["time_features"]),
             n_features=len(config["data"]["features"]),
             output_size=config["data"]["lookforward"],
             d_model=config["model"]["d_model"],
@@ -115,7 +111,18 @@ def build_model(model_name, config):
             dropout=config["model"]["dropout"],
             pool=config["model"]["pool"],
             lr=config["model"]["lr"],
-            use_positional_encoding=config["model"]["use_positional_encoding"],
+        )
+    elif model_name == "t2vp_transformer_regr":
+        return T2VPTransformerRegressorModule(
+            n_features=len(config["data"]["features"]),
+            output_size=config["data"]["lookforward"],
+            d_model=config["model"]["d_model"],
+            nhead=config["model"]["nhead"],
+            n_layers=config["model"]["n_layers"],
+            dim_feedforward=config["model"]["dim_feedforward"],
+            dropout=config["model"]["dropout"],
+            pool=config["model"]["pool"],
+            lr=config["model"]["lr"],
         )
 
     else:
