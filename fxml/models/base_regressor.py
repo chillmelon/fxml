@@ -206,4 +206,5 @@ class BaseRegressorModule(pl.LightningModule):
             opt, step_size=self.scheduler_step_size, gamma=self.scheduler_gamma
         )
 
-        return [opt], [sched]
+        return [opt]
+        # [sched]

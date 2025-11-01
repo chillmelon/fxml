@@ -5,7 +5,8 @@ defaults:
 hydra:
   sweeper:
     params:
-      model: xfmr_regr, t2v_xfmr_regr, t2vp_xfmr_regr
+      model.optimizer_type: adamw, adam
+      # model: xfmr_regr, t2v_xfmr_regr, t2vp_xfmr_regr
 # Training parameters
 training:
   batch_size: 1024
