@@ -65,6 +65,7 @@ def build_model(model_name, config):
             n_hidden=config["model"]["n_hidden"],
             dropout=config["model"]["dropout"],
             lr=config["model"]["lr"],
+            optimizer_type=config["model"]["optimizer"],
         )
 
     elif model_name == "lstm_regressor":
@@ -75,6 +76,7 @@ def build_model(model_name, config):
             n_layers=config["model"]["n_layers"],
             dropout=config["model"]["dropout"],
             lr=config["model"]["lr"],
+            optimizer_type=config["model"]["optimizer"],
         )
 
     elif model_name == "gru_regressor":
@@ -85,6 +87,7 @@ def build_model(model_name, config):
             n_layers=config["model"]["n_layers"],
             dropout=config["model"]["dropout"],
             lr=config["model"]["lr"],
+            optimizer_type=config["model"]["optimizer"],
         )
 
     elif model_name == "transformer_regressor":
@@ -98,6 +101,7 @@ def build_model(model_name, config):
             dropout=config["model"]["dropout"],
             pool=config["model"]["pool"],
             lr=config["model"]["lr"],
+            optimizer_type=config["model"]["optimizer"],
         )
 
     elif model_name == "t2v_transformer_regr":
@@ -111,6 +115,7 @@ def build_model(model_name, config):
             dropout=config["model"]["dropout"],
             pool=config["model"]["pool"],
             lr=config["model"]["lr"],
+            optimizer_type=config["model"]["optimizer"],
         )
     elif model_name == "t2vp_transformer_regr":
         return T2VPTransformerRegressorModule(
@@ -123,6 +128,7 @@ def build_model(model_name, config):
             dropout=config["model"]["dropout"],
             pool=config["model"]["pool"],
             lr=config["model"]["lr"],
+            optimizer_type=config["model"]["optimizer"],
         )
 
     else:
