@@ -3,6 +3,6 @@ d_model: 64
 nhead: 4
 n_layers: 2
 dim_feedforward: 256
-dropout: 0.3
+dropout: 0.2
 pool: "last"
 lr: 3e-4
