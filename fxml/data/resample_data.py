@@ -1,8 +1,6 @@
 import hydra
 import pandas as pd
-from omegaconf import DictConfig, OmegaConf
-
-from fxml.utils import load_config
+from omegaconf import DictConfig
 
 
 def filter_data_by_date_range(df, start_date=None, end_date=None):

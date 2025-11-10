@@ -1,7 +1,4 @@
-import os
-import re
 from pathlib import Path
-from typing import Union
 
 import hydra
 import joblib
@@ -112,30 +109,6 @@ def main(config: DictConfig):
     print(f"✅ Normalized data saved to:\n  {train_norm_path}\n  {test_norm_path}")
 
     return
-
-
-def denorm(data, col_name, cfg):
-    """
-    反轉 normalization。
-    Args:
-        data: ndarray / Series
-        col_name: 欄位名稱
-        data_path: 原始 data 檔案路徑（用於推導 scaler 目錄）
-        cfg: 讀入的 Hydra config（cfg.scaler）
-    """
-    s_type = cfg.scaler[col_name]["type"]
-    scaler_dir = Path("data/processed/scalers") / Path(cfg.data.train_data_path).stem
-    scaler_path = scaler_dir / f"{col_name}_{s_type}.pkl"
-
-    if s_type == "none":
-        return data
-    elif s_type == "log":
-        return np.expm1(data)
-    elif not scaler_path.exists():
-        raise FileNotFoundError(f"Scaler not found: {scaler_path}")
-
-    scaler = joblib.load(scaler_path)
-    return scaler.inverse_transform(np.asarray(data).reshape(-1, 1)).ravel()
 
 
 if __name__ == "__main__":

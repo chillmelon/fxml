@@ -10,7 +10,7 @@ class NextReturnRegrDataset(Dataset):
 
         self.lookback = lookback
         close = ohlcv["close"].to_numpy()
-        r = np.log(ohlcv["close"]).diff().bfill().to_numpy()
+        r = ohlcv["close"].apply(np.log).diff().bfill().to_numpy()
 
         self.X = (
             np.lib.stride_tricks.sliding_window_view(close, lookback)

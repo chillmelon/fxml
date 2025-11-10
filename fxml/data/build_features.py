@@ -1,11 +1,10 @@
-from pathlib import Path
-
 import hydra
 import numpy as np
 import pandas as pd
 from omegaconf import DictConfig
 
 from fxml.data.preprocessing.features import (
+    add_microstructure,
     add_returns,
     add_technical_indicators,
     add_time_features,
@@ -30,6 +29,7 @@ def main(config: DictConfig):
             df.reset_index(inplace=True)
 
             df["log_volume"] = np.log1p(df["volume"])
+            df = add_microstructure(df)
             # add returns
             return_config = config.get("features", {}).get("returns", {})
             df = add_returns(df, config=return_config)

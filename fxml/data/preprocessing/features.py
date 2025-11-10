@@ -24,6 +24,16 @@ def handle_timestamp_column(df, timestamp_col="timestamp"):
     return df
 
 
+def add_microstructure(df):
+    """Add multi-resolution structural features"""
+    print("Adding multi-resolution structural features...")
+    df = df.copy()
+    df["o_c_diff"] = df["close"] - df["open"]
+    df["o_h_diff"] = df["high"] - df["open"]
+    df["o_l_diff"] = df["low"] - df["open"]
+    return df
+
+
 def add_returns(df, config={}):
     """Add return features (delta, return, log return)"""
     print("Adding return features...")
@@ -69,6 +79,7 @@ def add_technical_indicators(df, config={}):
     for window in ema_windows:
         df.ta.ema(length=window, append=True)
         df[f"EMA_{window}_slope"] = df[f"EMA_{window}"].diff().fillna(0)
+        df[f"close_to_EMA_{window}"] = df["close"] / df[f"EMA_{window}"]
     print(f"  ✓ EMA features for windows: {ema_windows}")
 
     # ATR
