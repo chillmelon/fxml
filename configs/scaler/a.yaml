@@ -21,18 +21,25 @@ close_log_fd_return: { type: std }
 # EMA 與 slope
 EMA_5: { type: std }
 EMA_5_slope: { type: std }
+close_to_EMA_5: { type: minmax }
 EMA_9: { type: std }
 EMA_9_slope: { type: std }
+close_to_EMA_9: { type: minmax }
 EMA_20: { type: std }
 EMA_20_slope: { type: std }
+close_to_EMA_20: { type: minmax }
 EMA_24: { type: std }
 EMA_24_slope: { type: std }
+close_to_EMA_24: { type: minmax }
 EMA_36: { type: std }
 EMA_36_slope: { type: std }
+close_to_EMA_36: { type: minmax }
 EMA_50: { type: std }
 EMA_50_slope: { type: std }
+close_to_EMA_50: { type: minmax }
 EMA_100: { type: std }
 EMA_100_slope: { type: std }
+close_to_EMA_100: { type: minmax }
 
 # 波動與動能
 ATRr_14: { type: minmax } # (r"(atr)")

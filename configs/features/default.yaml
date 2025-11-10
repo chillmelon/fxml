@@ -2,15 +2,15 @@
 returns:
   price_cols:
     - close
-  d_value: 0.5
+  d_value: 0.35
 
 # Technical indicator settings
 technical_indicators:
   rv_windows: [5, 15, 50]
   ema_windows: [5, 9, 20, 24, 36, 50, 100]
-  atr_windows: [14, 60, 120]
-  adx_windows: [14]
-  rsi_windows: [14, 25, 50]
+  atr_windows: [14, 60, 120, 200]
+  adx_windows: [14, 50]
+  rsi_windows: [5, 14, 25, 50]
   bb_windows: [5, 10, 15, 20]
   macd:
     - fast: 8
