@@ -8,9 +8,9 @@ features:
   - high
   - low
   - close
-  - close_log_fd_return
-  - close_log_return
-  - volume
+  # - close_log_fd_return
+  # - close_log_return
+  # - volume
   # - close_to_ema_5
   # - close_to_ema_9
   # - close_to_ema_20
@@ -36,12 +36,12 @@ features:
   - ATRr_60
   - ATRr_120
   - ATRr_200
-  - RSI_5
-  - RSI_14
-  - RSI_25
-  - RSI_50
-  - ADX_14
-  - ADX_50
+  # - RSI_5
+  # - RSI_14
+  # - RSI_25
+  # - RSI_50
+  # - ADX_14
+  # - ADX_50
   # - hour_sin
   # - hour_cos
   # - dow_sin

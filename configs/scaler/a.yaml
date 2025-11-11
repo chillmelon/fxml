@@ -18,6 +18,15 @@ close_log_return: { type: std } # 應該匹配但因少逗號錯誤沒被命中
 close_fd_return: { type: std }
 close_log_fd_return: { type: std }
 
+# SMA
+SMA_5: { type: std }
+SMA_9: { type: std }
+SMA_20: { type: std }
+SMA_24: { type: std }
+SMA_36: { type: std }
+SMA_50: { type: std }
+SMA_100: { type: std }
+
 # EMA 與 slope
 EMA_5: { type: std }
 EMA_5_slope: { type: std }

@@ -7,10 +7,11 @@ returns:
 # Technical indicator settings
 technical_indicators:
   rv_windows: [5, 15, 50]
+  sma_windows: [5, 9, 20, 24, 36, 50, 100]
   ema_windows: [5, 9, 20, 24, 36, 50, 100]
   atr_windows: [14, 60, 120, 200]
-  adx_windows: [14, 50]
-  rsi_windows: [5, 14, 25, 50]
+  adx_windows: [5, 10, 15, 20, 25, 30, 36]
+  rsi_windows: [5, 14, 20, 25, 50]
   bb_windows: [5, 10, 15, 20]
   macd:
     - fast: 8
