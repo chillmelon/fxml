@@ -4,27 +4,27 @@ test_path: data/processed/USDJPY-15m-20240101-20241231_FEATURES_NORM.pkl
 # time_features:
 
 features:
-  # - open
-  # - high
-  # - low
-  # - close
-  # - close_log_fd_return
-  # - close_log_return
+  - open
+  - high
+  - low
+  - close
+  - close_log_fd_return
+  - close_log_return
   - volume
-  - close_to_ema_5
-  - close_to_ema_9
-  - close_to_ema_20
-  - close_to_ema_24
-  - close_to_ema_36
-  - close_to_ema_50
-  - close_to_ema_100
-  # - EMA_5
-  # - EMA_9
-  # - EMA_20
-  # - EMA_24
-  # - EMA_36
-  # - EMA_50
-  # - EMA_100
+  # - close_to_ema_5
+  # - close_to_ema_9
+  # - close_to_ema_20
+  # - close_to_ema_24
+  # - close_to_ema_36
+  # - close_to_ema_50
+  # - close_to_ema_100
+  - EMA_5
+  - EMA_9
+  - EMA_20
+  - EMA_24
+  - EMA_36
+  - EMA_50
+  - EMA_100
   - EMA_5_slope
   - EMA_9_slope
   - EMA_20_slope
@@ -52,7 +52,7 @@ features:
   # - month_cos
 
 target:
-  - close_to_ema_5
+  - close
 
 lookback: 60
-lookforward: 1
+lookforward: 5
