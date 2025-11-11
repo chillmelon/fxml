@@ -75,6 +75,12 @@ def add_technical_indicators(df, config={}):
     # print(f"  ✓ RV features for windows: {rv_windows}")
 
     # EMAs
+    sma_windows = config.get("sma_windows", [5, 20])
+    for window in sma_windows:
+        df.ta.sma(length=window, append=True)
+    print(f"  ✓ SMA features for windows: {sma_windows}")
+
+    # EMAs
     ema_windows = config.get("ema_windows", [5, 20])
     for window in ema_windows:
         df.ta.ema(length=window, append=True)

@@ -54,10 +54,16 @@ close_to_EMA_100: { type: minmax }
 ATRr_14: { type: minmax } # (r"(atr)")
 ATRr_60: { type: minmax }
 ATRr_120: { type: minmax }
-ADX_14: { type: minmax } # (r"(adx|plus_di|minus_di)")
-ADXR_14_2: { type: none }
-DMP_14: { type: none }
-DMN_14: { type: none }
+ADX_5: { type: minmax } # (r"(adx|plus_di|minus_di)")
+ADX_10: { type: minmax } # (r"(adx|plus_di|minus_di)")
+ADX_15: { type: minmax } # (r"(adx|plus_di|minus_di)")
+ADX_20: { type: minmax } # (r"(adx|plus_di|minus_di)")
+ADX_25: { type: minmax } # (r"(adx|plus_di|minus_di)")
+ADX_30: { type: minmax } # (r"(adx|plus_di|minus_di)")
+ADX_36: { type: minmax } # (r"(adx|plus_di|minus_di)")
+# ADXR_14_2: { type: none }
+# DMP_14: { type: none }
+# DMN_14: { type: none }
 RSI_14: { type: minmax } # (r"(rsi)")
 RSI_25: { type: minmax }
 RSI_50: { type: minmax }
