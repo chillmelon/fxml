@@ -18,6 +18,13 @@ features:
   # - close_to_ema_36
   # - close_to_ema_50
   # - close_to_ema_100
+  - SMA_5
+  - SMA_9
+  - SMA_20
+  - SMA_24
+  - SMA_36
+  - SMA_50
+  - SMA_100
   - EMA_5
   - EMA_9
   - EMA_20
@@ -36,11 +43,18 @@ features:
   - ATRr_60
   - ATRr_120
   - ATRr_200
-  # - RSI_5
-  # - RSI_14
-  # - RSI_25
-  # - RSI_50
-  # - ADX_14
+  - RSI_5
+  - RSI_14
+  - RSI_20
+  - RSI_25
+  - RSI_50
+  - ADX_5
+  - ADX_10
+  - ADX_15
+  - ADX_20
+  - ADX_25
+  - ADX_30
+  - ADX_36
   # - ADX_50
   # - hour_sin
   # - hour_cos

@@ -108,6 +108,7 @@ def build_model(model_name, config):
         return T2VTransformerRegressorModule(
             n_features=len(config["data"]["features"]),
             output_size=config["data"]["lookforward"],
+            kernel_size=config["model"]["kernel_size"],
             d_model=config["model"]["d_model"],
             nhead=config["model"]["nhead"],
             n_layers=config["model"]["n_layers"],
@@ -121,6 +122,7 @@ def build_model(model_name, config):
         return T2VPTransformerRegressorModule(
             n_features=len(config["data"]["features"]),
             output_size=config["data"]["lookforward"],
+            kernel_size=config["model"]["kernel_size"],
             d_model=config["model"]["d_model"],
             nhead=config["model"]["nhead"],
             n_layers=config["model"]["n_layers"],
