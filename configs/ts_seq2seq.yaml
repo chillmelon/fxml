@@ -1,6 +1,6 @@
 defaults:
   - data: sequence_regr
-  - model: lstm_regressor
+  - model: t2v_lstm_regressor
   - _self_
 hydra:
   sweeper:
@@ -20,4 +20,3 @@ training:
   num_workers: 0
   val_split: 0.5
   shuffle: True
-

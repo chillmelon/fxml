@@ -24,7 +24,7 @@ class T2VLSTMRegressor(nn.Module):
         # Time2Vec embedding
         self.time2vec = Time2Vec(n_features, kernel_size)
 
-        input_size = n_features + n_features * kernel_size
+        input_size = n_features + 2 * n_features * kernel_size
         self.lstm = nn.LSTM(
             input_size=input_size,
             hidden_size=n_hidden,
