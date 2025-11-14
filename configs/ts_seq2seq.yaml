@@ -1,18 +1,18 @@
 defaults:
   - data: sequence_regr
-  - model: t2v_xfmr_regr
+  - model: lstm_regressor
   - _self_
 hydra:
   sweeper:
     params:
-      # model.kernel_size: 1, 2
-      # model.pool: last, mean, cls
-      model.d_model: 128, 256
-      model.nhead: 4, 8
-      model.n_layers: 2, 3, 4
-      model.dim_feedforward: 256, 512
+      # model.kernel_size: 2
+      model.pool: cls
+      model.d_model: 128
+      model.nhead: 4
+      model.n_layers: 4
+      model.dim_feedforward: 256
       # model.dropout: 0.1, 0.2, 0.3
-      # model: xfmr_regr, t2v_xfmr_regr, t2vp_xfmr_regr
+      model: xfmr_regr, t2v_xfmr_regr, t2vp_xfmr_regr
 # Training parameters
 training:
   batch_size: 1024
@@ -20,3 +20,4 @@ training:
   num_workers: 0
   val_split: 0.5
   shuffle: True
+

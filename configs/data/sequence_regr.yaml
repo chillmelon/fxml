@@ -69,4 +69,4 @@ target:
   - close
 
 lookback: 60
-lookforward: 5
+lookforward: 1
