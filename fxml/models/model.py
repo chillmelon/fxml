@@ -3,6 +3,7 @@ from fxml.models.baseline_regressor.model import BaselineRegressorModule
 from fxml.models.gru_regressor.model import GRURegressorModule
 from fxml.models.lstm_classifier.model import LSTMClassifierModule
 from fxml.models.lstm_regressor.model import LSTMRegressorModule
+from fxml.models.t2v_lstm_regressor.model import T2VLSTMRegressorModule
 from fxml.models.t2v_transformer_clfr.model import T2VTransformerClassifierModule
 from fxml.models.t2v_transformer_regr.model import T2VTransformerRegressorModule
 from fxml.models.t2vp_transformer_regr.model import T2VPTransformerRegressorModule
@@ -72,6 +73,18 @@ def build_model(model_name, config):
         return LSTMRegressorModule(
             n_features=len(config["data"]["features"]),
             output_size=config["data"]["lookforward"],
+            n_hidden=config["model"]["n_hidden"],
+            n_layers=config["model"]["n_layers"],
+            dropout=config["model"]["dropout"],
+            lr=config["model"]["lr"],
+            optimizer_type=config["model"]["optimizer"],
+        )
+
+    elif model_name == "t2v_lstm_regressor":
+        return T2VLSTMRegressorModule(
+            n_features=len(config["data"]["features"]),
+            output_size=config["data"]["lookforward"],
+            kernel_size=config["model"]["kernel_size"],
             n_hidden=config["model"]["n_hidden"],
             n_layers=config["model"]["n_layers"],
             dropout=config["model"]["dropout"],

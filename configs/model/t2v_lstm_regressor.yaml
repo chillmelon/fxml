@@ -1,0 +1,6 @@
+name: "t2v_lstm_regressor"
+kernel_size: 1
+n_hidden: 128
+n_layers: 4
+dropout: 0.2
+lr: 3e-4
