@@ -6,9 +6,6 @@ import pandas as pd
 from backtesting import Backtest
 from omegaconf import DictConfig
 
-from fxml.trading.strategies.direction_confidence_strategy import (
-    DirectionConfidenceStrategy,
-)
 from fxml.trading.strategies.direction_model_strategy import DirectionModelStrategy
 from fxml.trading.strategies.duo_model_strategy import DuoModelStrategy
 from fxml.trading.strategies.emacross_strategy import EmacrossStrategy
@@ -24,16 +21,15 @@ def main(config: DictConfig):
     history = history.join(predictions, how="left")
     history["time"] = history.index
     history.set_index("time", inplace=True)
-    print(history.head())
     history.rename(
         columns={
             "open": "Open",
             "high": "High",
             "low": "Low",
             "close": "Close",
-            "tick_volume": "Volume",
-            "side": "side",
-            "bin": "bin",
+            "volume": "Volume",
+            "signal": "signal",
+            "pred_r": "pred_r",
         },
         inplace=True,
     )
@@ -41,11 +37,12 @@ def main(config: DictConfig):
     # Run backtest
     backtest = Backtest(
         history,
-        EmacrossStrategy,
-        cash=10000,
-        margin=0.01,
-        hedging=False,
+        DirectionModelStrategy,
+        cash=100000,
+        margin=0.1,
+        hedging=True,
         exclusive_orders=False,
+        finalize_trades=True,
     )
     result = backtest.run()
 
